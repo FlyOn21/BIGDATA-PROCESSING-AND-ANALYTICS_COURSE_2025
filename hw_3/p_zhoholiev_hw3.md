@@ -74,11 +74,6 @@ print(f"Using Green Taxi data from: {GREEN_TAXI_PATH}")
 print(f"Using Zone Lookup data from: {ZONE_LOOKUP_PATH}")
 spark.conf.set("spark.sql.parquet.mergeSchema", "false")
 
-class TaxiTypeEnum(Enum):
-    GREEN = "GREEN"
-    YELLOW = "YELLOW"
-    
-
     
 S3_TEMP_BUCKET = "zhogolev-pv-temp-files"
 
@@ -96,6 +91,10 @@ temp_folders.extend([YELLOW_TEMP_FOLDER, GREEN_TEMP_FOLDER])
 
 #CURRENT_DAY
 current_date = datetime.now(timezone.utc).date().isoformat()
+
+class TaxiTypeEnum(Enum):
+    GREEN = "GREEN"
+    YELLOW = "YELLOW"
 ```
 
 
@@ -492,6 +491,7 @@ inspect_parquet_schema(GREEN_TAXI_PATH)
 
 
 ```pyspark
+# Schemas for read base source files
 yellow_taxi_schema_universal = StructType([
     StructField("VendorID", LongType(), True),
     StructField("tpep_pickup_datetime", TimestampNTZType(), True),
@@ -537,6 +537,7 @@ green_taxi_schema_universal = StructType([
     StructField('congestion_surcharge', IntegerType(), True)
 ])
 
+#Schema read if happend some unexpected problems
 yellow_taxi_schema_flexible = StructType([
     StructField("VendorID", StringType(), True),
     StructField("tpep_pickup_datetime", TimestampNTZType(), True),
@@ -593,6 +594,7 @@ green_taxi_schema_flexible = StructType([
 
 
 ```pyspark
+# Func read singl parquet file
 def read_single_parquet_file(file_path: str, taxi_type: TaxiTypeEnum) -> DataFrame:
     """Read a single parquet file with schema enforcement"""
     try:
@@ -641,7 +643,7 @@ def read_single_parquet_file(file_path: str, taxi_type: TaxiTypeEnum) -> DataFra
 
 print("Single file reading function defined")
 
-
+#Func cast types
 def apply_type_casting(df: DataFrame) -> DataFrame:
     """Apply type casting to DataFrame"""
     
@@ -682,7 +684,7 @@ temp_files = []
 
 print("Save to folder function defined")
 
-
+# Func clear processed files bucket.
 def clear_s3_temp_folders():
     """Clean up S3 temporary folders using Spark"""
     import boto3
@@ -741,6 +743,7 @@ def clear_s3_temp_folders():
 
 
 ```pyspark
+#Processing base source file one by one
 def process_files_one_by_one_to_s3(file_paths: list, taxi_type: TaxiTypeEnum, target_s3_folder: str) -> dict:
     """Process files one by one and save each to S3 directly in the main folder"""
     
@@ -754,7 +757,7 @@ def process_files_one_by_one_to_s3(file_paths: list, taxi_type: TaxiTypeEnum, ta
     
     for i, file_path in enumerate(file_paths, 1):
         try:
-            print(f"\n[{i}/{total_files}] Processing: {os.path.basename(file_path)}")
+            print(f"[{i}/{total_files}] Processing: {os.path.basename(file_path)}")
 
             df = read_single_parquet_file(file_path, taxi_type)
  
@@ -781,12 +784,12 @@ def process_files_one_by_one_to_s3(file_paths: list, taxi_type: TaxiTypeEnum, ta
                 'record_count': record_count
             })
             
-            print(f"    ✓ Processed {record_count:,} records")
+            print(f"Processed {record_count:,} records")
 
             del df
             
         except Exception as e:
-            print(f"    ✗ Failed: {str(e)[:150]}...")
+            print(f"Failed: {str(e)[:150]}...")
             failed_files.append({
                 'file_path': file_path,
                 'error': str(e)
@@ -831,7 +834,7 @@ print("File-by-file processing function defined")
 
 
 ```pyspark
-# FOR TEST
+# FOR TEST ONLY. One file processing
 test_read = []
 file_path_test = yellow_files[0]
 test_read.append(file_path_test)
@@ -850,6 +853,7 @@ print(test_read)
 
 
 ```pyspark
+#Processing yellow taxi dataset
 yellow_results = None
 
 if yellow_files:
@@ -3112,6 +3116,7 @@ else:
 
 
 ```pyspark
+#Processing green taxi dataset
 green_results = None
 
 if green_files:
@@ -6193,7 +6198,7 @@ def verify_processed_data_safely(s3_folder: str, taxi_type: TaxiTypeEnum, schema
         print(f"    ✗ Verification failed: {e}")
         return {"error": str(e)}
 
-# # Read Yellow Taxi Data
+# Read Yellow Taxi Data
 yellow_df = verify_processed_data_safely(YELLOW_TEMP_FOLDER, TaxiTypeEnum.YELLOW, yellow_processed_schema)
 
 # Read Green Taxi Data  
