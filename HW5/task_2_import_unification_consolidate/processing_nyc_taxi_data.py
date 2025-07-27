@@ -10,6 +10,14 @@ class TaxiTypeEnum(Enum):
     GREEN = "GREEN"
     YELLOW = "YELLOW"
 
+def is_databricks_environment():
+    """Check if running in Databricks environment."""
+    try:
+        import pyspark.dbutils
+        return True
+    except ImportError:
+        return False
+
 
 class TaxiDataProcessor:
     """
@@ -420,7 +428,13 @@ def main():
         logger.error(f"Pipeline execution failed: {e}")
         raise e
     finally:
-        spark.stop()
+        if not is_databricks_environment():
+            try:
+                spark.stop()
+                logger.info("Spark session stopped successfully")
+            except Exception as e:
+                logger.warning(f"Error stopping Spark session: {e}")
+
 
 
 if __name__ == "__main__":

@@ -5,6 +5,14 @@ from datetime import datetime, timezone
 from typing import Optional, List
 import logging
 
+def is_databricks_environment():
+    """Check if running in Databricks environment."""
+    try:
+        import pyspark.dbutils
+        return True
+    except ImportError:
+        return False
+
 
 class WeeklyZoneAnalysisProcessor:
     """
@@ -416,15 +424,7 @@ def main():
 
     try:
         processor = WeeklyZoneAnalysisProcessor(spark)
-
-        # Process all days
-        result_df = processor.process_weekly_zone_analysis()
-
-        logger.info("Sample of final weekly zone analysis data:")
-        result_df.select(
-            "pickup_zone", "day_name", "trips_count",
-            "high_fare_share", "high_fare_count", "avg_total_amount"
-        ).show(15, truncate=False)
+        processor.process_weekly_zone_analysis()
 
         logger.info("Weekly zone analysis pipeline execution completed successfully!")
 
@@ -432,7 +432,12 @@ def main():
         logger.error(f"Weekly zone analysis pipeline execution failed: {e}")
         raise
     finally:
-        spark.stop()
+        if not is_databricks_environment():
+            try:
+                spark.stop()
+                logger.info("Spark session stopped successfully")
+            except Exception as e:
+                logger.warning(f"Error stopping Spark session: {e}")
 
 
 if __name__ == "__main__":

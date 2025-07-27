@@ -1,8 +1,16 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.types import *
-from pyspark.sql.functions import *
+from pyspark.sql.types import StructField, StructType, StringType, LongType, DoubleType, IntegerType
+from pyspark.sql.functions import col, count, avg, max, min, lit, row_number, sum
 from datetime import datetime, timezone
 import logging
+
+def is_databricks_environment():
+    """Check if running in Databricks environment."""
+    try:
+        import pyspark.dbutils
+        return True
+    except ImportError:
+        return False
 
 
 class ZoneSummaryProcessor:
@@ -82,7 +90,7 @@ class ZoneSummaryProcessor:
             total_count = df.count()
             valid_zones_count = df.filter(col("pickup_zone").isNotNull()).count()
 
-            self.logger.info(f"Source data loaded successfully:")
+            self.logger.info("Source data loaded successfully:")
             self.logger.info(f"  Total records: {total_count:,}")
             self.logger.info(f"  Records with valid pickup zones: {valid_zones_count:,}")
             self.logger.info(f"  Columns: {len(df.columns)}")
@@ -251,7 +259,7 @@ class ZoneSummaryProcessor:
             "yellow_share",
             "green_share",
             "max_trip_distance",
-            "min_tip_amount",
+            "min_trip_amount",
             "avg_trip_duration_minutes",
             "avg_passenger_count",
             "most_common_pickup_hour"
@@ -279,7 +287,6 @@ class ZoneSummaryProcessor:
         total_zones = zone_summary_df.count()
         self.logger.info(f"Total zones: {total_zones}")
 
-        # Check for data quality issues
         null_zones = zone_summary_df.filter(col("pickup_zone").isNull()).count()
         negative_trips = zone_summary_df.filter(col("total_trips") < 0).count()
         invalid_shares = zone_summary_df.filter(
@@ -302,7 +309,6 @@ class ZoneSummaryProcessor:
         self.logger.info("Top 10 zones by total trips:")
         zone_summary_df.show(10, truncate=False)
 
-        # Verify taxi type shares sum to 1
         self.logger.info("Sample taxi type share validation:")
         zone_summary_df.select(
             "pickup_zone",
@@ -425,6 +431,7 @@ class ZoneSummaryProcessor:
             raise
 
 
+
 def main():
     """Main execution function."""
     spark = SparkSession.builder \
@@ -446,7 +453,12 @@ def main():
         logger.error(f"Zone summary pipeline execution failed: {e}")
         raise
     finally:
-        spark.stop()
+        if not is_databricks_environment():
+            try:
+                spark.stop()
+                logger.info("Spark session stopped successfully")
+            except Exception as e:
+                logger.warning(f"Error stopping Spark session: {e}")
 
 
 if __name__ == "__main__":
