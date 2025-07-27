@@ -5,7 +5,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import DataFrame, avg, col, count, lit, max, min, row_number, sum
 from pyspark.sql.types import DoubleType, IntegerType, LongType, StringType, StructField, StructType
 
-from HW5.utils.check_is_databricks_env import is_databricks_environment
+from HW7.utils.check_is_databricks_env import is_databricks_environment
 
 
 class ZoneSummaryProcessor:

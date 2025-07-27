@@ -45,6 +45,7 @@ select = [
 ]
 ignore = ["F401",
     "E501",
+    "E101",
     "E402",
     "F403", # do not use wildcard imports
     "F405",

@@ -6,7 +6,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 
-from HW5.utils.check_is_databricks_env import is_databricks_environment
+from HW7.utils.check_is_databricks_env import is_databricks_environment
 
 
 class WeeklyZoneAnalysisProcessor:
