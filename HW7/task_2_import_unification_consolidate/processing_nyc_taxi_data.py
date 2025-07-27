@@ -199,11 +199,7 @@ class TaxiDataProcessor:
 	def add_time_features(self, df: DataFrame) -> DataFrame:
 		"""Add time-based features to the DataFrame."""
 		return (
-			df.withColumn(
-				'trip_duration_minutes',
-				(unix_timestamp(col('dropoff_datetime')) - unix_timestamp(col('pickup_datetime'))) / 60,
-			)
-			.withColumn('pickup_hour', hour(col('pickup_datetime')))
+			df.withColumn('pickup_hour', hour(col('pickup_datetime')))
 			.withColumn('pickup_day_of_week', dayofweek(col('pickup_datetime')))
 			.withColumn(
 				'duration_min', (unix_timestamp(col('dropoff_datetime')) - unix_timestamp(col('pickup_datetime'))) / 60
@@ -213,7 +209,7 @@ class TaxiDataProcessor:
 	def filter_trips(self, df: DataFrame) -> DataFrame:
 		"""Apply data quality filters to the trips."""
 		return df.filter(
-			(col('trip_distance') >= 0.1) & (col('fare_amount') >= 2.0) & (col('trip_duration_minutes') >= 1.0)
+			(col('trip_distance') >= 0.1) & (col('fare_amount') >= 2.0) & (col('duration_min') >= 1.0)
 		)
 
 	def load_zone_lookup(self, zone_lookup_path: str) -> DataFrame:
@@ -300,7 +296,6 @@ class TaxiDataProcessor:
                 congestion_surcharge DOUBLE,
                 airport_fee DOUBLE,
                 taxi_type STRING NOT NULL,
-                trip_duration_minutes DOUBLE,
                 pickup_hour INT,
                 pickup_day_of_week INT,
                 duration_min DOUBLE,

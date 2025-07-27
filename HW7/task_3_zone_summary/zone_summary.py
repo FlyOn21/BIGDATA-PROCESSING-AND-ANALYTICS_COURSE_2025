@@ -229,7 +229,7 @@ class ZoneSummaryProcessor:
 				'yellow_share',
 				'green_share',
 				'max_trip_distance',
-				'min_trip_amount',
+				'min_tip_amount',
 				'avg_trip_duration_minutes',
 				'avg_passenger_count',
 				'most_common_pickup_hour',
