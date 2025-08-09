@@ -1,0 +1,77 @@
+[project]
+name = "bigdata-processing-and-analytics-course-2025"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pyspark==3.4.1",
+    "ruff>=0.12.5",
+]
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+exclude = [
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".tox",
+    ".venv",
+    "_build",
+    "venv",
+    "docker",
+    "alembic",
+    "alembic.ini",
+    "alembic/versions",
+    "be_common_sub",
+    "config",
+    "tests",
+    "tests/*"
+]
+
+[tool.ruff.lint]
+select = [
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "F", # pyflakes
+    "I", # isort
+    "N", # pep8-naming
+    "UP", # pyupgrade
+    "B", # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+]
+ignore = ["F401",
+    "E501",
+    "E101",
+    "E402",
+    "F403", # do not use wildcard imports
+    "F405",
+    "F821",
+    "UP035",
+    "B008", # do not perform function calls in argument defaults
+    "B904", # raise without from inside except
+    "B006", # ignore defoult mitable array use
+    "W191", # indentation contains tabs (conflicts with format.indent-style="tab")
+]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+split-on-trailing-comma = true
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "tab"
+docstring-code-format = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+exclude = [".venv", "tests", ".databricks"]
