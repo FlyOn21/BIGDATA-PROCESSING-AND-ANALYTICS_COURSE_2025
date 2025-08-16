@@ -1,0 +1,9 @@
+-- Task 1
+CREATE OR REPLACE STORAGE INTEGRATION s3_int_zhohlievpv
+  TYPE = EXTERNAL_STAGE
+  STORAGE_PROVIDER = 'S3'
+  ENABLED = TRUE
+  STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::554739427960:role/zhohlievpv_snowflake_role'
+  STORAGE_ALLOWED_LOCATIONS = ('*');
+
+DESC INTEGRATION s3_int_zhohlievpv;
