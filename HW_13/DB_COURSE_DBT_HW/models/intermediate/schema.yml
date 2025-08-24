@@ -1,0 +1,52 @@
+version: 2
+
+models:
+  - name: int_players_male
+    description: "Unified male players table."
+    columns:
+      - name: player_id
+        tests: [not_null, unique]
+
+  - name: int_players_female
+    description: "Unified female players table."
+    columns:
+      - name: player_id
+        tests: [not_null, unique]
+
+  - name: int_coaches_male
+    description: "Male coaches with computed age."
+    columns:
+      - name: coach_id
+        tests: [not_null, unique]
+
+  - name: int_coaches_female
+    description: "Female coaches with computed age."
+    columns:
+      - name: coach_id
+        tests: [not_null, unique]
+
+  - name: int_team_profiles_male
+    description: "Team-level aggregates and coach info (male)."
+    columns:
+      - name: club_id
+        tests:
+          - relationships: {to: ref('stg_male_teams'), field: club_id}
+      - name: coach_id
+        tests:
+          - relationships: {to: ref('stg_male_coaches'), field: coach_id}
+
+  - name: int_team_profiles_female
+    description: "Team-level aggregates and coach info (female)."
+    columns:
+      - name: club_id
+        tests:
+          - relationships: {to: ref('stg_female_teams'), field: club_id}
+      - name: coach_id
+        tests:
+          - relationships: {to: ref('stg_female_coaches'), field: coach_id}
+
+  - name: int_league_insights_male
+    description: "League-level metrics (male)."
+
+  - name: int_league_insights_female
+    description: "League-level metrics (female)."

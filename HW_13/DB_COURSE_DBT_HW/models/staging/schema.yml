@@ -1,0 +1,56 @@
+version: 2
+
+models:
+  - name: stg_male_players
+    description: "Staging for male players with normalized types and snake_case."
+    columns:
+      - name: player_id
+        tests: [not_null, unique]
+      - name: gender
+        tests:
+          - accepted_values:
+              values: ['M']
+
+  - name: stg_female_players
+    description: "Staging for female players with normalized types and snake_case."
+    columns:
+      - name: player_id
+        tests: [not_null, unique]
+      - name: gender
+        tests:
+          - accepted_values:
+              values: ['F']
+
+  - name: stg_male_teams
+    description: "Staging for male teams."
+    columns:
+      - name: club_id
+        tests: [not_null, unique]
+      - name: league_id
+        tests: [not_null]
+
+  - name: stg_female_teams
+    description: "Staging for female teams."
+    columns:
+      - name: club_id
+        tests: [not_null, unique]
+      - name: league_id
+        tests: [not_null]
+
+  - name: stg_male_coaches
+    description: "Staging for male coaches."
+    columns:
+      - name: coach_id
+        tests: [not_null, unique]
+      - name: gender
+        tests:
+          - accepted_values: {values: ['M']}
+
+  - name: stg_female_coaches
+    description: "Staging for female coaches."
+    columns:
+      - name: coach_id
+        tests: [not_null, unique]
+      - name: gender
+        tests:
+          - accepted_values: {values: ['F']}

@@ -1,0 +1,10 @@
+version: 2
+exposures:
+  - name: team_dashboard
+    type: dashboard
+    maturity: high
+    owner:
+      name: Analytics Team
+      email: you@example.com
+    depends_on:
+      - ref('mart_team_dashboard')

@@ -1,0 +1,11 @@
+version: 2
+sources:
+  - name: public_raw
+    schema: public_raw
+    tables:
+      - name: male_players_10000
+      - name: female_players_10000
+      - name: male_teams_10000
+      - name: female_teams_10000
+      - name: male_coaches_10000
+      - name: female_coaches_10000

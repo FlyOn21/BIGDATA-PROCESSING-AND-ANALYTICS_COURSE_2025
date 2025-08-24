@@ -359,3 +359,7 @@ cython_debug/
 
 
 .databricks
+#dbt
+HW_13/DB_COURSE_DBT_HW/target/
+HW_13/DB_COURSE_DBT_HW/dbt_packages/
+HW_13/DB_COURSE_DBT_HW/logs/
