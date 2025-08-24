@@ -5,4 +5,4 @@ with tp as (
 )
 select *
 from tp
-where avg_overall < 40 or avg_overall > 100;
+where avg_overall < 40 or avg_overall > 100

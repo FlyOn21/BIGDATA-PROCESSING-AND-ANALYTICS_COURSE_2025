@@ -7,4 +7,4 @@ select *
 from pl
 where wage_eur is not null
   and value_eur is not null
-  and wage_eur > value_eur;
+  and wage_eur > value_eur

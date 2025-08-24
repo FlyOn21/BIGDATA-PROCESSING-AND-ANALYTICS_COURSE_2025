@@ -1,26 +1,39 @@
-with tp as (
-  select * from {{ ref('int_team_profiles_male') }}
-),
-pl as (
+{{ config(materialized='table', tags=['inter','male', 'leagues', 'male_league_inter']) }}
+
+
+-- League-level insights (male)
+with players as (
   select * from {{ ref('int_players_male') }}
 ),
-league_agg as (
-  select
-    tp.league_id,
-    avg(tp.avg_overall)::numeric(5,2) as league_avg_overall
-  from tp
-  group by tp.league_id
+teams as (
+  select * from {{ ref('int_team_profiles_male') }}
 ),
-young_talents as (
+league_player_metrics as (
   select
-    league_id,
-    bool_or(age <= 23 and potential > 85) as has_young_talents
-  from pl
-  group by league_id
+    p.league_id,
+    avg(p.overall)::numeric(10,2)                                   as avg_player_overall,
+    (sum(case when p.age <= 23 and p.potential > 85 then 1 else 0 end) > 0) as has_young_talents
+  from players p
+  where p.league_id is not null
+  group by p.league_id
+),
+league_team_metrics as (
+  select
+    t.league_id,
+    avg(t.avg_overall)::numeric(10,2)                                as avg_team_overall,
+    sum(t.players_count)                                             as total_players,
+    count(*)                                                         as total_teams
+  from teams t
+  where t.league_id is not null
+  group by t.league_id
 )
 select
-  l.league_id,
-  l.league_avg_overall,
-  coalesce(y.has_young_talents,false) as has_young_talents
-from league_agg l
-left join young_talents y using (league_id);
+  coalesce(lp.league_id, lt.league_id)             as league_id,
+  lp.avg_player_overall,
+  lt.avg_team_overall,
+  lt.total_players,
+  lt.total_teams,
+  lp.has_young_talents::boolean                    as has_young_talents
+from league_player_metrics lp
+full join league_team_metrics lt
+  on lp.league_id = lt.league_id

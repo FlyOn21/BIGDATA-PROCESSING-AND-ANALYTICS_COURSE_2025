@@ -43,11 +43,55 @@ models:
       +materialized: table
       +schema: staging
     intermediate:
-      +materialized: incremental
+      +materialized: table
       +schema: intermediate
     marts:
       +materialized: view
       +schema: marts
+
+vars:
+  male_players_type_map:
+    player_id: int
+    club_team_id: int
+    league_id: int
+    value_eur: numeric
+    wage_eur: numeric
+    overall: int
+    potential: int
+    age: int
+
+  female_players_type_map:
+    player_id: int
+    club_team_id: int
+    league_id: int
+    value_eur: numeric
+    wage_eur: numeric
+    overall: int
+    potential: int
+    age: int
+
+  male_coaches_type_map:
+    coach_id: int
+    nationality_id: int
+    dob: date
+
+  female_coaches_type_map:
+    coach_id: int
+    nationality_id: int
+    dob: date
+
+  male_teams_type_map:
+    team_id: int
+    league_id: int
+    nationality_id: int
+    coach_id: int
+
+  female_teams_type_map:
+    team_id: int
+    league_id: int
+    nationality_id: int
+    coach_id: int
+
 
 seeds:
   DB_COURSE_DBT_HW:

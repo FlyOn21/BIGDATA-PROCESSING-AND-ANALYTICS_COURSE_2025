@@ -9,4 +9,4 @@ dups as (
   group by 1
   having count(*) > 1
 )
-select * from dups;
+select * from dups

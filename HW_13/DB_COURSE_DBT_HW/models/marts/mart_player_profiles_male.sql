@@ -1,19 +1,38 @@
-with p as (select * from {{ ref('int_players_male') }})
+{{ config(
+  tags=['mart', 'player_profiles', 'male', 'player_profiles_mart_male']
+  ) }}
+
+
+with p as (
+  select
+    gender,
+    player_id,
+    player_url,
+    short_name,
+    long_name,
+    club_id,
+    league_id,
+    value_eur,
+    wage_eur,
+    overall,
+    potential,
+    age,
+    position
+  from {{ ref('int_players_male')  }}
+)
 select
-  player_id,
   gender,
-  player_name,
+  player_id,
+  player_url,
+  short_name,
+  long_name,
   club_id,
   league_id,
+  value_eur,
+  wage_eur,
   overall,
   potential,
   age,
-  case
-    when age < 21 then 'U21'
-    when age between 21 and 28 then 'Prime'
-    else 'Veteran'
-  end as age_group,
-  {{ classify_role('position') }} as role_class,
-  value_eur,
-  wage_eur
-from p;
+  {{ age_group_filter('p.age') }} as age_group,
+  {{ classify_role('p.position') }} as role
+from p
