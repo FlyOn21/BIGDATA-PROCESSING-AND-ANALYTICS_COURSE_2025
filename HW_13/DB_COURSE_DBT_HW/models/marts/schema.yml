@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: mart_player_profiles_male
+    description: "Player profiles (male) with role and age_group."
+
+  - name: mart_player_profiles_female
+    description: "Player profiles (female) with role and age_group."
+
+  - name: mart_team_dashboard
+    description: "Team dashboard combining team metrics, coach info, and standout players."

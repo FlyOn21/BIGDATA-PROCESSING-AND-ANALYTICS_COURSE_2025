@@ -1,0 +1,48 @@
+version: 2
+models:
+  - name: int_players_male
+    description: Intermediate normalized male players.
+    columns: &id001
+    - name: player_id_stg
+    - name: gender
+    - name: club_id
+    - name: league_id
+    - name: overall
+    - name: potential
+    - name: age
+    - name: player_id
+      tests:
+      - not_null
+      - unique
+  - name: int_players_female
+    description: Intermediate normalized female players.
+    columns: *id001
+  - name: int_team_profiles_male
+    description: Aggregated team profile metrics (male).
+    columns: &id002
+    - name: club_id
+      tests:
+      - not_null
+      - unique
+    - name: league_id
+      tests:
+      - not_null
+    - name: avg_overall
+    - name: total_team_value_eur
+    - name: players_count
+  - name: int_team_profiles_female
+    description: Aggregated team profile metrics (female).
+    columns: *id002
+  - name: int_league_insights_male
+    description: League-level insights (male).
+    columns: &id003
+    - name: league_id
+      tests:
+      - not_null
+      - unique
+    - name: avg_player_overall
+    - name: avg_team_overall
+    - name: has_young_talents
+  - name: int_league_insights_female
+    description: League-level insights (female).
+    columns: *id003

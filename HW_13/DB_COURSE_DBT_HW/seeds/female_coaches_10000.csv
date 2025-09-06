@@ -1,0 +1,53 @@
+coach_id,coach_url,short_name,long_name,dob,nationality_id,nationality_name,face_url
+2079,/coach/2079/gareth-taylor/,G. Taylor,Gareth Taylor,1973-02-25,50,Wales,
+94303,/coach/94303/fabrice-abriel/,F. Abriel,Fabrice Abriel,1979-07-06,18,France,https://cdn.sportmonks.com/images/soccer/players/31/94303.png
+94451,/coach/94451/frederic-biancalani/,F. Biancalani,Frédéric Biancalani,1974-07-21,18,France,
+455803,/coach/455803/andries-jonker/,A. Jonker,Andries Jonker,1962-09-22,34,Netherlands,
+464820,/coach/464820/corinne-diacre/,C. Diacre,Corinne Diacre,1974-08-04,18,France,https://cdn.sportmonks.com/images/soccer/players/20/464820.png
+466607,/coach/466607/xiuquan-jia/,X. Jia,Xiuquan Jia,1963-03-23,155,China PR,https://cdn.sportmonks.com/images/soccer/players/15/466607.png
+529478,/coach/529478/yannick-chandioux/,Y. Chandioux,Yannick Chandioux,1975-09-01,18,France,
+15434001,/coach/15434001/jonas-eidevall/,J. Eidevall,Jonas Eidevall,1983-01-28,46,Sweden,
+19282261,/coach/19282261/patrice-lair/,P. Lair,Patrice Lair,1961-06-16,18,France,
+26313202,/coach/26313202/sandrine-soubeyrand/,S. Soubeyrand,Sandrine Soubeyrand,1973-08-16,18,France,https://cdn.sportmonks.com/images/soccer/players/18/26313202.png
+32431129,/coach/32431129/emma-hayes/,E. Hayes,Emma Hayes,1976-10-18,14,England,
+32431137,/coach/32431137/kelly-chambers/,K. Chambers,Kelly Chambers,,14,England,
+32431158,/coach/32431158/matt-beard/,M. Beard,Matt Beard,1978-01-09,14,England,
+32431159,/coach/32431159/carla-ward/,C. Ward,Carla Ward,,14,England,
+35279752,/coach/35279752/peter-gerhardsson/,P. Gerhardsson,Peter Gerhardsson,1959-08-22,46,Sweden,https://cdn.sportmonks.com/images/soccer/players/8/35279752.png
+35279753,/coach/35279753/desiree-ellis/,D. Ellis,Desiree Ellis,1963-03-14,140,South Africa,
+35279755,/coach/35279755/milena-bertolini/,M. Bertolini,Milena Bertolini,1966-06-24,27,Italy,
+35279765,/coach/35279765/jorge-vilda/,J. Vilda,Jorge Vilda,1981-07-07,45,Spain,https://cdn.sportmonks.com/images/soccer/players/21/35279765.png
+35279766,/coach/35279766/francisco-neto/,F. Neto,Francisco Neto,1981-07-11,38,Portugal,
+35279780,/coach/35279780/jose-antonio-letelier-henriquez/,J. Letelier Henríquez,José Antonio Letelier Henríquez,1966-05-23,55,Chile,
+35280557,/coach/35280557/martina-voss-tecklenburg/,M. Voss-Tecklenburg,Martina Voss-Tecklenburg,1967-12-22,21,Germany,https://cdn.sportmonks.com/images/soccer/players/13/35280557.png
+35280567,/coach/35280567/sarina-glotzbach-wiegman/,S. Glotzbach-Wiegman,Sarina Glotzbach-Wiegman,1969-10-26,34,Netherlands,https://cdn.sportmonks.com/images/soccer/players/23/35280567.png
+35304616,/coach/35304616/sonia-bompastor/,S. Bompastor,Sonia Bompastor,1980-06-08,18,France,
+35681724,/coach/35681724/alain-djeumfa/,A. Djeumfa,Alain Djeumfa,,103,Cameroon,
+37265116,/coach/37265116/brian-sorensen/,B. Sorensen,Brian Sorensen,1980-06-15,13,Denmark,
+37265250,/coach/37265250/thorsteinn-halldorsson/,T. Halldórsson,Thorsteinn Halldórsson,,24,Iceland,
+37296295,/coach/37296295/pedro-martinez-losa/,P. Martínez Losa,Pedro Martínez Losa,,45,Spain,
+37296301,/coach/37296301/amandine-miquel/,A. Miquel,Amandine Miquel,1984-08-04,18,France,
+37303727,/coach/37303727/tony-gustavsson/,T. Gustavsson,Tony Gustavsson,1973-08-14,46,Sweden,
+37342910,/coach/37342910/lydia-bedford/,L. Bedford,Lydia Bedford,,14,England,
+37347540,/coach/37347540/futoshi-ikeda/,F. Ikeda,Futoshi Ikeda,1970-10-04,163,Japan,
+37350128,/coach/37350128/ives-serneels/,I. Serneels,Ives Serneels,1972-10-16,7,Belgium,
+37350129,/coach/37350129/vlatko-andonovski/,V. Andonovski,Vlatko Andonovski,1976-09-14,95,United States,
+37357800,/coach/37357800/hege-riise/,H. Riise,Hege Riise,1969-07-18,36,Norway,
+37375752,/coach/37375752/colin-bell/,C. Bell,Colin Bell,1961-08-05,14,England,
+37416863,/coach/37416863/naruephon-kaenson/,N.Kaenson,Naruephon Kaenson,,188,Thailand,
+37428117,/coach/37428117/beverly-priestman/,B. Priestman,Beverly Priestman,,70,Canada,
+37430277,/coach/37430277/pedro-lopez/,Pedro López,Pedro López,1979-05-06,45,Spain,
+37469773,/coach/37469773/pia-mariane-sundhage/,P. Sundhage,Pia Mariane Sundhage,1960-02-13,46,Sweden,
+37524025,/coach/37524025/marc-skinner/,M. Skinner,Marc Skinner,,14,England,
+37524186,/coach/37524186/rehanne-skinner/,R. Skinner,Rehanne Skinner,1979-11-13,14,England,
+37524489,/coach/37524489/jitka-klimkova/,J. Klimkova,Jitka Klimkova,1974-08-20,12,Czech Republic,
+37554044,/coach/37554044/olli-harder/,O. Harder,Olli Harder,,198,New Zealand,
+37573961,/coach/37573961/randy-waldrum/,R. Waldrum,Randy Waldrum,,95,United States,
+37573962,/coach/37573962/hubert-busby/,H. Busby,Hubert Busby,1969-06-18,70,Canada,
+37578659,/coach/37578659/christophe-forest/,C. Forest,Christophe Forest,1969-03-18,18,France,
+37612238,/coach/37612238/german-dario-portanova/,G. Portanova,Germán Darío Portanova,1973-10-19,52,Argentina,
+37614418,/coach/37614418/qingxia-shui/,Q. Shui,Qingxia Shui,1966-12-18,155,China PR,
+37615657,/coach/37615657/frederic-goncalves/,F. Gonçalves,Frédéric Gonçalves,1982-03-06,18,France,
+37617776,/coach/37617776/mathieu-rufie/,M. Rufié,Mathieu Rufié,1983-06-17,18,France,
+37654887,/coach/37654887/gerard-precheur/,G. Prêcheur,Gérard Prêcheur,1959-10-23,18,France,
+37667852,/coach/37667852/michel-bradaia/,M. Bradaia,Michel Bradaia,1971-12-03,18,France,

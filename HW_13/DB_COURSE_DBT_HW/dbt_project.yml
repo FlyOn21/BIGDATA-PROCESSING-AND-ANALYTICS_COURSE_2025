@@ -1,0 +1,460 @@
+
+# Name your project! Project names should contain only lowercase characters
+# and underscores. A good package name should reflect your organization's
+# name or the intended use of these models
+name: 'DB_COURSE_DBT_HW'
+version: '1.0.0'
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'DB_COURSE_DBT_HW'
+
+# These configurations specify where dbt should look for different types of files.
+# The `model-paths` config, for example, states that models in this project can be
+# found in the "models/" directory. You probably won't need to change these!
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:         # directories to be removed by `dbt clean`
+  - "target"
+  - "dbt_packages"
+
+
+# Configuring models
+# Full documentation: https://docs.getdbt.com/docs/configuring-models
+
+# In this example config, we tell dbt to build all models in the example/
+# directory as views. These settings can be overridden in the individual model
+# files using the `{{ config(...) }}` macro.
+dispatch:
+  - macro_namespace: dbt_utils
+    search_order:
+      - dbt_utils
+      - dbt
+
+models:
+  DB_COURSE_DBT_HW:
+    +pre-hook:
+      - "{{ limit_pg_resources() }}"
+    staging:
+      +materialized: table
+      +schema: staging
+    intermediate:
+      +materialized: table
+      +schema: intermediate
+    marts:
+      +materialized: view
+      +schema: marts
+
+vars:
+  male_players_type_map:
+    player_id: int
+    club_team_id: int
+    league_id: int
+    value_eur: numeric
+    wage_eur: numeric
+    overall: int
+    potential: int
+    age: int
+
+  female_players_type_map:
+    player_id: int
+    club_team_id: int
+    league_id: int
+    value_eur: numeric
+    wage_eur: numeric
+    overall: int
+    potential: int
+    age: int
+
+  male_coaches_type_map:
+    coach_id: int
+    nationality_id: int
+    dob: date
+
+  female_coaches_type_map:
+    coach_id: int
+    nationality_id: int
+    dob: date
+
+  male_teams_type_map:
+    team_id: int
+    league_id: int
+    nationality_id: int
+    coach_id: int
+
+  female_teams_type_map:
+    team_id: int
+    league_id: int
+    nationality_id: int
+    coach_id: int
+
+
+seeds:
+  DB_COURSE_DBT_HW:
+    +schema: raw
+    male_players:
+      +delimiter: ","
+      +column_types:
+        player_id: int
+        player_url: text
+        fifa_version: int
+        fifa_update: int
+        fifa_update_date: date
+        short_name: text
+        long_name: text
+        player_positions: text
+        overall: int
+        potential: int
+        value_eur: int
+        wage_eur: int
+        age: int
+        dob: date
+        height_cm: int
+        weight_kg: int
+        league_id: int
+        league_name: text
+        league_level: int
+        club_team_id: int
+        club_name: text
+        club_position: text
+        club_jersey_number: int
+        club_loaned_from: text
+        club_joined_date: date
+        club_contract_valid_until_year: int
+        nationality_id: int
+        nationality_name: text
+        nation_team_id: int
+        nation_position: text
+        nation_jersey_number: int
+        preferred_foot: text
+        weak_foot: int
+        skill_moves: int
+        international_reputation: int
+        work_rate: text
+        body_type: text
+        real_face: text
+        release_clause_eur: int
+        player_tags: text
+        player_traits: text
+        pace: int
+        shooting: int
+        passing: int
+        dribbling: int
+        defending: int
+        physic: int
+        attacking_crossing: int
+        attacking_finishing: int
+        attacking_heading_accuracy: int
+        attacking_short_passing: int
+        attacking_volleys: int
+        skill_dribbling: int
+        skill_curve: int
+        skill_fk_accuracy: int
+        skill_long_passing: int
+        skill_ball_control: int
+        movement_acceleration: int
+        movement_sprint_speed: int
+        movement_agility: int
+        movement_reactions: int
+        movement_balance: int
+        power_shot_power: int
+        power_jumping: int
+        power_stamina: int
+        power_strength: int
+        power_long_shots: int
+        mentality_aggression: int
+        mentality_interceptions: int
+        mentality_positioning: int
+        mentality_vision: int
+        mentality_penalties: int
+        mentality_composure: int
+        defending_marking_awareness: int
+        defending_standing_tackle: int
+        defending_sliding_tackle: int
+        goalkeeping_diving: int
+        goalkeeping_handling: int
+        goalkeeping_kicking: int
+        goalkeeping_positioning: int
+        goalkeeping_reflexes: int
+        goalkeeping_speed: text
+        ls: text
+        st: text
+        rs: text
+        lw: int
+        lf: int
+        cf: int
+        rf: int
+        rw: int
+        lam: text
+        cam: text
+        ram: text
+        lm: text
+        lcm: text
+        cm: text
+        rcm: text
+        rm: text
+        lwb: text
+        ldm: text
+        cdm: text
+        rdm: text
+        rwb: text
+        lb: text
+        lcb: text
+        cb: text
+        rcb: text
+        rb: text
+        gk: text
+        player_face_url: text
+    female_players:
+      +column_types:
+        player_id: int
+        player_url: text
+        fifa_version: int
+        fifa_update: int
+        fifa_update_date: date
+        short_name: text
+        long_name: text
+        player_positions: text
+        overall: int
+        potential: int
+        value_eur: int
+        wage_eur: int
+        age: int
+        dob: date
+        height_cm: int
+        weight_kg: int
+        league_id: int
+        league_name: text
+        league_level: int
+        club_team_id: int
+        club_name: text
+        club_position: text
+        club_jersey_number: int
+        club_loaned_from: text
+        club_joined_date: date
+        club_contract_valid_until_year: int
+        nationality_id: int
+        nationality_name: text
+        nation_team_id: int
+        nation_position: text
+        nation_jersey_number: int
+        preferred_foot: text
+        weak_foot: int
+        skill_moves: int
+        international_reputation: int
+        work_rate: text
+        body_type: text
+        real_face: text
+        release_clause_eur: int
+        player_tags: text
+        player_traits: text
+        pace: int
+        shooting: int
+        passing: int
+        dribbling: int
+        defending: int
+        physic: int
+        attacking_crossing: int
+        attacking_finishing: int
+        attacking_heading_accuracy: int
+        attacking_short_passing: int
+        attacking_volleys: int
+        skill_dribbling: int
+        skill_curve: int
+        skill_fk_accuracy: int
+        skill_long_passing: int
+        skill_ball_control: int
+        movement_acceleration: int
+        movement_sprint_speed: int
+        movement_agility: int
+        movement_reactions: int
+        movement_balance: int
+        power_shot_power: int
+        power_jumping: int
+        power_stamina: int
+        power_strength: int
+        power_long_shots: int
+        mentality_aggression: int
+        mentality_interceptions: int
+        mentality_positioning: int
+        mentality_vision: int
+        mentality_penalties: int
+        mentality_composure: int
+        defending_marking_awareness: int
+        defending_standing_tackle: int
+        defending_sliding_tackle: int
+        goalkeeping_diving: int
+        goalkeeping_handling: int
+        goalkeeping_kicking: int
+        goalkeeping_positioning: int
+        goalkeeping_reflexes: int
+        goalkeeping_speed: text
+        ls: text
+        st: text
+        rs: text
+        lw: int
+        lf: int
+        cf: int
+        rf: int
+        rw: int
+        lam: text
+        cam: text
+        ram: text
+        lm: text
+        lcm: text
+        cm: text
+        rcm: text
+        rm: text
+        lwb: text
+        ldm: text
+        cdm: text
+        rdm: text
+        rwb: text
+        lb: text
+        lcb: text
+        cb: text
+        rcb: text
+        rb: text
+        gk: text
+        player_face_url: text
+      delimiter: ","
+    male_teams:
+      +column_types:
+        team_id: int
+        team_url: text
+        fifa_version: int
+        fifa_update: int
+        fifa_update_date: date
+        team_name: text
+        league_id: int
+        league_name: text
+        league_level: int
+        nationality_id: int
+        nationality_name: text
+        overall: int
+        attack: int
+        midfield: int
+        defence: int
+        coach_id: int
+        home_stadium: text
+        rival_team: int
+        international_prestige: int
+        domestic_prestige: int
+        transfer_budget_eur: text
+        club_worth_eur: int
+        starting_xi_average_age: numeric
+        whole_team_average_age: numeric
+        captain: int
+        short_free_kick: int
+        long_free_kick: int
+        left_short_free_kick: int
+        right_short_free_kick: int
+        penalties: int
+        left_corner: int
+        right_corner: int
+        def_style: text
+        def_team_width: int
+        def_team_depth: int
+        def_defence_pressure: text
+        def_defence_aggression: text
+        def_defence_width: text
+        def_defence_defender_line: text
+        off_style: text
+        off_build_up_play: text
+        off_chance_creation: text
+        off_team_width: int
+        off_players_in_box: int
+        off_corners: int
+        off_free_kicks: int
+        build_up_play_speed: text
+        build_up_play_dribbling: text
+        build_up_play_passing: text
+        build_up_play_positioning: text
+        chance_creation_passing: text
+        chance_creation_crossing: text
+        chance_creation_shooting: text
+        chance_creation_positioning: text
+      delimiter: ","
+    female_teams:
+      +column_types:
+        team_id: int
+        team_url: text
+        fifa_version: int
+        fifa_update: int
+        fifa_update_date: date
+        team_name: text
+        league_id: int
+        league_name: text
+        league_level: int
+        nationality_id: int
+        nationality_name: text
+        overall: int
+        attack: int
+        midfield: int
+        defence: int
+        coach_id: int
+        home_stadium: text
+        rival_team: int
+        international_prestige: int
+        domestic_prestige: int
+        transfer_budget_eur: text
+        club_worth_eur: int
+        starting_xi_average_age: numeric
+        whole_team_average_age: numeric
+        captain: int
+        short_free_kick: int
+        long_free_kick: int
+        left_short_free_kick: int
+        right_short_free_kick: int
+        penalties: int
+        left_corner: int
+        right_corner: int
+        def_style: text
+        def_team_width: int
+        def_team_depth: int
+        def_defence_pressure: text
+        def_defence_aggression: text
+        def_defence_width: text
+        def_defence_defender_line: text
+        off_style: text
+        off_build_up_play: text
+        off_chance_creation: text
+        off_team_width: int
+        off_players_in_box: int
+        off_corners: int
+        off_free_kicks: int
+        build_up_play_speed: text
+        build_up_play_dribbling: text
+        build_up_play_passing: text
+        build_up_play_positioning: text
+        chance_creation_passing: text
+        chance_creation_crossing: text
+        chance_creation_shooting: text
+        chance_creation_positioning: text
+      delimiter: ","
+    male_coaches:
+      +column_types:
+        coach_id: int
+        coach_url: text
+        short_name: text
+        long_name: text
+        dob: date
+        nationality_id: int
+        nationality_name: text
+        face_url: text
+      delimiter: ","
+    female_coaches:
+      +column_types:
+        coach_id: int
+        coach_url: text
+        short_name: text
+        long_name: text
+        dob: date
+        nationality_id: int
+        nationality_name: text
+        face_url: text
+      delimiter: ","

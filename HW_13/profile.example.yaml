@@ -1,0 +1,14 @@
+# file can be placed in ~/.dbt/profiles.yml
+
+DB_COURSE_DBT_HW:
+  target: dev
+  outputs:
+    dev:
+      dbname: dbt_hw_13
+      host: 127.0.0.1
+      pass: "{{ env_var('DBT_ENV_SECRET_PG_PASSWORD') }}"
+      port: 5432
+      schema: public
+      threads: 5
+      type: postgres
+      user: "{{ env_var('DBT_PG_USER') }}"

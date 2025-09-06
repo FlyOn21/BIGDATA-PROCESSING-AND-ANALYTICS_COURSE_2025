@@ -1,0 +1,28 @@
+version: "3.7"
+services:
+
+  dbpsql:
+    image: postgres:16
+    container_name: postgres_db_dbt_hw_13
+    environment:
+      POSTGRES_PASSWORD: 12345678
+      POSTGRES_USER: dbt_user
+      POSTGRES_DB: dbt_hw_13
+    restart: always
+    hostname: postgres_db_cost
+    networks:
+      - dbt_network
+    ports:
+      - "5432:5432"
+    volumes:
+      - type: volume
+        source: postgres_data_dev
+        target: /var/lib/postgresql/data
+
+networks:
+  dbt_network:
+    name: dbt_network
+
+volumes:
+  postgres_data_dev:
+    driver: local
