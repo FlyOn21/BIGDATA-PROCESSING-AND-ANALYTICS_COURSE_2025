@@ -13,6 +13,7 @@ from fake_data_generator import DATA_GENERATOR, USER_POOL, EnhancedTransactionFa
 from kafka import KafkaProducer
 from kafka.admin import KafkaAdminClient, NewTopic
 from kafka.errors import KafkaError
+from kafka.producer.future import FutureRecordMetadata
 from tqdm import tqdm
 
 logging.basicConfig(
@@ -69,62 +70,47 @@ class EnhancedKafkaDataProducer:
                 if key in self.stats:
                     self.stats[key] += value
 
-    def send_transaction(self, transaction: dict[str, Any], topic: str = 'transactions'):
-        """Send transaction to Kafka with stats tracking"""
+    def _send_message(
+            self,
+            payload: dict[str, Any],
+            topic: str,
+            count_key: str,
+            core_count_key: str
+    )-> FutureRecordMetadata | None:
         try:
-            key = transaction.get('user_id', str(uuid.uuid4()))
-            future = self.producer.send(
-                topic=topic,
-                key=key,
-                value=transaction
-            )
+            key = payload.get('user_id', str(uuid.uuid4()))
+            future = self.producer.send(topic=topic, key=key, value=payload)
+            size = len(json.dumps(payload, default=str))
+            is_core = key in USER_POOL.core_users
 
-            data_size = len(json.dumps(transaction, default=str))
-
-            # Track if this is from core user
-            is_core_user = key in USER_POOL.core_users
-
-            self._update_stats(
-                transactions_sent=1,
-                bytes_sent=data_size,
-                core_user_transactions=1 if is_core_user else 0,
-                new_user_data=0 if is_core_user else 1
-            )
-
+            self._update_stats(**{
+                count_key: 1,
+                'bytes_sent': size,
+                core_count_key: 1 if is_core else 0,
+                'new_user_data': 0 if is_core else 1
+            })
             return future
 
         except KafkaError as e:
-            logger.error(f"Failed to send transaction: {e}")
+            logger.error(f"Failed to send to {topic}: {e}")
             self._update_stats(errors=1)
             return None
 
-    def send_activity(self, activity: dict[str, Any], topic: str = 'user_activity'):
-        """Send user activity to Kafka with stats tracking"""
-        try:
-            key = activity.get('user_id', str(uuid.uuid4()))
-            future = self.producer.send(
-                topic=topic,
-                key=key,
-                value=activity
-            )
+    def send_transaction(self, tx: dict, topic: str = 'transactions') -> FutureRecordMetadata | None:
+        return self._send_message(
+            payload=tx,
+            topic=topic,
+            count_key='transactions_sent',
+            core_count_key='core_user_transactions'
+        )
 
-            data_size = len(json.dumps(activity, default=str))
-
-            is_core_user = key in USER_POOL.core_users
-
-            self._update_stats(
-                activities_sent=1,
-                bytes_sent=data_size,
-                core_user_activities=1 if is_core_user else 0,
-                new_user_data=0 if is_core_user else 1
-            )
-
-            return future
-
-        except KafkaError as e:
-            logger.error(f"Failed to send activity: {e}")
-            self._update_stats(errors=1)
-            return None
+    def send_activity(self, act: dict, topic: str = 'user_activity')-> FutureRecordMetadata | None:
+        return self._send_message(
+            payload=act,
+            topic=topic,
+            count_key='activities_sent',
+            core_count_key='core_user_activities'
+        )
 
     def generate_realistic_batch(self, batch_size: int = 1000):
         """Generate realistic batch using enhanced data generator"""
@@ -144,7 +130,6 @@ class EnhancedKafkaDataProducer:
     def generate_user_sessions(self, num_sessions: int = 50):
         """Generate correlated user sessions"""
         try:
-            # Generate sessions mostly for core users
             core_users = random.sample(USER_POOL.core_users,
                                        min(num_sessions // 2, len(USER_POOL.core_users)))
 
@@ -157,7 +142,6 @@ class EnhancedKafkaDataProducer:
                     transaction = EnhancedTransactionFactory(user_id=user_id)
                     self.send_transaction(asdict(transaction))
 
-            # Generate some sessions for new users too
             remaining_sessions = num_sessions - len(core_users)
             for _ in range(remaining_sessions):
                 session_activities = self.data_generator.generate_user_session()
@@ -172,7 +156,6 @@ class EnhancedKafkaDataProducer:
     def generate_correlated_data_burst(self, num_users: int = 20):
         """Generate burst of correlated transaction and activity data"""
         try:
-            # Focus on core users
             selected_users = random.sample(USER_POOL.core_users,
                                            min(num_users, len(USER_POOL.core_users)))
 
@@ -386,7 +369,7 @@ def main() -> None:
                         help='Number of threads for parallel generation')
     parser.add_argument('--bootstrap-servers', type=str, default='127.0.0.1:9092',
                         help='Kafka bootstrap servers')
-    parser.add_argument('--create-topics', action='store_true', default=True,
+    parser.add_argument('--create-topics', action='store_true', default=False,
                         help='Create topics before starting')
     parser.add_argument('--core-users', type=int, default=25,
                         help='Number of core users to generate')

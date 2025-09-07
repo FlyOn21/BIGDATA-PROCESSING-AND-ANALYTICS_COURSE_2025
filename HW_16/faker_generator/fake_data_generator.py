@@ -84,19 +84,19 @@ class FixedUserPool:
 
     def _create_user_profiles(self) -> dict[str, dict]:
         """Create behavioral profiles for core users"""
-        profiles = {}
-        for user_id in self.core_users:
-            profiles[user_id] = {
+        return {
+            user_id: {
                 'activity_level': random.choice(['low', 'medium', 'high']),
                 'preferred_device': random.choice([d.value for d in Device]),
-                'fraud_tendency': random.random() < 0.02,  # 2% fraud tendency
+                'fraud_tendency': random.random() < 0.02,
                 'spending_tier': random.choice(['budget', 'medium', 'premium']),
                 'favorite_merchants': random.sample([
                     'Amazon', 'Target', 'Walmart', 'Best Buy', 'Home Depot',
                     'Starbucks', 'McDonald\'s', 'Shell', 'Exxon', 'CVS Pharmacy'
                 ], k=3)
             }
-        return profiles
+            for user_id in self.core_users
+        }
 
     def get_user_id(self, new_user_probability: float = 0.05) -> str:
         """Get user ID, mostly from core users, occasionally new users"""

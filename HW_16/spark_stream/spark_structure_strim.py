@@ -53,6 +53,7 @@ class SparkJsonSchemaStreamProcessor:
             driver_memory: str = "10g",
             executor_memory: str = "8g",
             max_result_size: str = "1g",
+            java_home: str = '/usr/lib/jvm/java-21-openjdk-amd64'
     ) -> None:
 
         # Clean environment variables that might cause conflicts
@@ -62,15 +63,12 @@ class SparkJsonSchemaStreamProcessor:
                 logger.info(f"Clearing {var}: {os.environ[var]}")
                 del os.environ[var]
 
-        # Set JAVA_HOME if not set
-        if 'JAVA_HOME' not in os.environ:
-            java_home = '/usr/lib/jvm/java-21-openjdk-amd64'
-            if os.path.exists(java_home):
-                os.environ['JAVA_HOME'] = java_home
-                logger.info(f"Set JAVA_HOME to: {java_home}")
+        if 'JAVA_HOME' not in os.environ and os.path.exists(java_home):
+            os.environ['JAVA_HOME'] = java_home
+            logger.info(f"Set JAVA_HOME to: {java_home}")
 
-        # Create temporary directory for Spark
-        self.temp_dir = tempfile.mkdtemp(prefix="spark_optimized_")
+        self.temp_dir = tempfile.mkdtemp(prefix="spark_optimized_", dir="/tmp")
+        logger.info(f"Using temporary directory for Spark: {self.temp_dir}")
         os.environ['SPARK_LOCAL_DIRS'] = self.temp_dir
 
         builder = (
@@ -146,6 +144,7 @@ class SparkJsonSchemaStreamProcessor:
             logger.error(f"Failed to create Spark session: {e}")
             raise e
 
+
         self.bootstrap_servers = bootstrap_servers
         self.starting_offsets = starting_offsets
         self.output_paths = {}
@@ -177,24 +176,41 @@ class SparkJsonSchemaStreamProcessor:
 
     @staticmethod
     def _parse_timestamp(col_expr):
-        """
-        Parse timestamp that can be either:
-        1. RFC3339 string (from JSON schema)
-        2. Unix timestamp in milliseconds (from actual data generator)
-
-        Returns: TimestampType column
-        """
-        # Try different timestamp formats, ensuring we always return TimestampType
-        return coalesce(
-            to_timestamp(col_expr, "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"),
-            to_timestamp(col_expr, "yyyy-MM-dd'T'HH:mm:ssXXX"),
-            to_timestamp(col_expr, "yyyy-MM-dd'T'HH:mm:ss.SSSX"),
-            to_timestamp(col_expr, "yyyy-MM-dd'T'HH:mm:ssX"),
+        formats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+            "yyyy-MM-dd'T'HH:mm:ssXXX",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSX",
+            "yyyy-MM-dd'T'HH:mm:ssX",
+        ]
+        ts_exprs = [to_timestamp(col_expr, fmt) for fmt in formats]
+        numeric_ts = (
             when(col_expr.rlike("^[0-9]+$"),
-                 when(col_expr.cast("bigint") > 1000000000000,
+                 when(col_expr.cast("bigint") > 1e12,
                       from_unixtime(col_expr.cast("bigint") / 1000).cast("timestamp"))
                  .otherwise(from_unixtime(col_expr.cast("bigint")).cast("timestamp"))
                  )
+        )
+        return coalesce(*ts_exprs, numeric_ts)
+
+    @staticmethod
+    def _start_console_stream(
+            df: DataFrame,
+            mode: str = "append",
+            trigger: str = "10 seconds",
+            truncate: bool = False,
+            num_rows: int = 10,
+    ):
+        """
+        Starts a streaming query that writes the output of a DataFrame to the console.
+        """
+        return (
+            df.writeStream
+            .outputMode(mode)
+            .format("console")
+            .option("truncate", str(truncate).lower())
+            .option("num_rows", str(num_rows))
+            .trigger(processingTime=trigger)
+            .start()
         )
 
     def _check_and_prepare_output_path(self, base_path: str, clear_existing: bool = False) -> str:
@@ -215,16 +231,15 @@ class SparkJsonSchemaStreamProcessor:
                 logger.info(f"Clearing existing data at {path}")
                 shutil.rmtree(path)
                 path.mkdir(parents=True, exist_ok=True)
-            else:
-                if any(path.iterdir()):
-                    logger.warning(f"Data exists at {path}, using different path")
-                    counter = 1
-                    while True:
-                        new_path = Path(f"{base_path}_{counter}")
-                        if not new_path.exists() or not any(new_path.iterdir()):
-                            path = new_path
-                            break
-                        counter += 1
+            elif any(path.iterdir()):
+                logger.warning(f"Data exists at {path}, using different path")
+                counter = 1
+                while True:
+                    new_path = Path(f"{base_path}_{counter}")
+                    if not new_path.exists() or not any(new_path.iterdir()):
+                        path = new_path
+                        break
+                    counter += 1
 
         path.mkdir(parents=True, exist_ok=True)
         self.output_paths[base_path] = str(path)
@@ -487,6 +502,9 @@ class SparkJsonSchemaStreamProcessor:
             .repartition(4, col("activity_user_id"))
         )
 
+        transactions_opt = transactions_opt.filter(col("txn_timestamp").isNotNull())
+        user_activity_opt = user_activity_opt.filter(col("activity_timestamp").isNotNull())
+
         join_condition = (
                 (col("txn_user_id") == col("activity_user_id")) &
                 (col("txn_timestamp") >= col("activity_timestamp") - expr("INTERVAL 5 MINUTES")) &
@@ -578,56 +596,44 @@ class SparkJsonSchemaStreamProcessor:
         streaming_queries = []
 
         logger.info("Starting console output for transactions...")
-        transactions_query = (
-            transactions_parsed
-            .writeStream
-            .outputMode("append")
-            .format("console")
-            .option("truncate", "false")
-            .option("numRows", 10)
-            .trigger(processingTime="10 seconds")
-            .start()
+        transactions_query = self._start_console_stream(
+            df=transactions_parsed,
+            mode="append",
+            trigger="10 seconds",
+            truncate=False,
+            num_rows=10
         )
         streaming_queries.append(transactions_query)
 
         # Console output for user activities
         logger.info("Starting console output for user activities...")
-        activities_query = (
-            user_activity_parsed
-            .writeStream
-            .outputMode("append")
-            .format("console")
-            .option("truncate", "false")
-            .option("numRows", 10)
-            .trigger(processingTime="10 seconds")
-            .start()
+        activities_query = self._start_console_stream(
+            df=user_activity_parsed,
+            mode="append",
+            trigger="10 seconds",
+            truncate=False,
+            num_rows=10
         )
         streaming_queries.append(activities_query)
 
         # Task 3: Windowed analysis
         logger.info("\n=== User Activity with Sliding Windows ===")
-        windowed_query = (
-            windowed_activity
-            .writeStream
-            .outputMode("complete")
-            .format("console")
-            .option("truncate", "false")
-            .option("numRows", 15)
-            .trigger(processingTime="15 seconds")
-            .start()
+        windowed_query = self._start_console_stream(
+            df=windowed_activity,
+            mode="complete",
+            trigger="15 seconds",
+            truncate=False,
+            num_rows=15
         )
         streaming_queries.append(windowed_query)
 
         logger.info("\n=== Event Type Summary ===")
-        summary_query = (
-            event_summary
-            .writeStream
-            .outputMode("complete")
-            .format("console")
-            .option("truncate", "false")
-            .option("numRows", 15)
-            .trigger(processingTime="15 seconds")
-            .start()
+        summary_query = self._start_console_stream(
+            df=event_summary,
+            mode="complete",
+            trigger="15 seconds",
+            truncate=False,
+            num_rows=15
         )
         streaming_queries.append(summary_query)
 
