@@ -64,7 +64,6 @@ tools-check: ## Verify host has curl and jq installed
 
 
 ########## Schema Registry tasks ##########
-
 schema-wait: ## Wait until Schema Registry is reachable
 	@bash -c 'echo "Waiting for Schema Registry at $(SR_URL) ..."; \
 	until curl -sf "$(SR_URL)/subjects" >/dev/null; do sleep 2; done; \
@@ -116,16 +115,6 @@ schema-delete-subject: tools-check schema-wait ## Delete subjects (USE WITH CARE
 
 
 ######### Starter tasks ##########
-#execute-listener: ## Run the application
-#	spark-submit \
-#    --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.2 \
-#    --driver-memory 4g \
-#    --executor-memory 4g \
-#    --conf spark.sql.session.timeZone=Europe/Kyiv \
-#    --conf spark.driver.maxResultSize=2g \
-#    --conf spark.sql.streaming.forceDeleteTempCheckpointLocation=true \
-#	${PWD}/spark_stream/spark_structure_strim.py
-
 execute-listener: ## Run the application
 	spark-submit \
     --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.2 \

@@ -7,18 +7,13 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
-from typing import Dict, Any
+from typing import Any, Dict
 
+from fake_data_generator import DATA_GENERATOR, USER_POOL, EnhancedTransactionFactory
 from kafka import KafkaProducer
 from kafka.admin import KafkaAdminClient, NewTopic
 from kafka.errors import KafkaError
 from tqdm import tqdm
-
-from fake_data_generator import (
-    EnhancedTransactionFactory,
-    DATA_GENERATOR,
-    USER_POOL
-)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -74,7 +69,7 @@ class EnhancedKafkaDataProducer:
                 if key in self.stats:
                     self.stats[key] += value
 
-    def send_transaction(self, transaction: Dict[str, Any], topic: str = 'transactions'):
+    def send_transaction(self, transaction: dict[str, Any], topic: str = 'transactions'):
         """Send transaction to Kafka with stats tracking"""
         try:
             key = transaction.get('user_id', str(uuid.uuid4()))
@@ -103,7 +98,7 @@ class EnhancedKafkaDataProducer:
             self._update_stats(errors=1)
             return None
 
-    def send_activity(self, activity: Dict[str, Any], topic: str = 'user_activity'):
+    def send_activity(self, activity: dict[str, Any], topic: str = 'user_activity'):
         """Send user activity to Kafka with stats tracking"""
         try:
             key = activity.get('user_id', str(uuid.uuid4()))

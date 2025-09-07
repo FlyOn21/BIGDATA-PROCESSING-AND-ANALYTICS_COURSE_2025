@@ -1,13 +1,11 @@
 import datetime
-import uuid
-import random
 import json
-import os
-from dataclasses import dataclass, asdict
+import random
+import uuid
+from dataclasses import dataclass
 from enum import Enum
-from typing import List, Dict, Set
+
 import factory
-from factory import fuzzy
 from faker import Faker
 from faker.providers import BaseProvider
 
@@ -80,11 +78,11 @@ class FixedUserPool:
         self.core_users = self._generate_core_users()
         self.user_profiles = self._create_user_profiles()
 
-    def _generate_core_users(self) -> List[str]:
+    def _generate_core_users(self) -> list[str]:
         """Generate fixed core user IDs"""
         return [str(uuid.uuid4()) for _ in range(self.core_user_count)]
 
-    def _create_user_profiles(self) -> Dict[str, Dict]:
+    def _create_user_profiles(self) -> dict[str, dict]:
         """Create behavioral profiles for core users"""
         profiles = {}
         for user_id in self.core_users:
@@ -106,7 +104,7 @@ class FixedUserPool:
             return str(uuid.uuid4())  # New user
         return random.choice(self.core_users)
 
-    def get_user_profile(self, user_id: str) -> Dict:
+    def get_user_profile(self, user_id: str) -> dict:
         """Get user profile or default for new users"""
         return self.user_profiles.get(user_id, {
             'activity_level': 'medium',
@@ -151,7 +149,7 @@ class EnhancedTransactionFactory(factory.Factory):
             return round(random.uniform(5.0, 150.0), 2)
         elif spending_tier == 'premium':
             return round(random.uniform(100.0, 2000.0), 2)
-        else:  # medium
+        else:
             return round(random.uniform(20.0, 500.0), 2)
 
     @factory.lazy_attribute
@@ -177,7 +175,6 @@ class EnhancedUserActivityFactory(factory.Factory):
     def device(self):
         profile = USER_POOL.get_user_profile(self.user_id)
         preferred = profile['preferred_device']
-        # 60% chance to use preferred device
         if random.random() < 0.6:
             return preferred
         else:
@@ -213,7 +210,7 @@ class EnhancedDataGenerator:
     def __init__(self):
         self.user_pool = USER_POOL
 
-    def generate_user_session(self, user_id: str = None, session_duration_minutes: int = 30) -> List[UserActivity]:
+    def generate_user_session(self, user_id: str = None, session_duration_minutes: int = 30) -> list[UserActivity]:
         """Generate a realistic user session with correlated activities"""
         if user_id is None:
             user_id = self.user_pool.get_user_id()
@@ -226,10 +223,9 @@ class EnhancedDataGenerator:
             num_activities = random.randint(10, 25)
         elif activity_level == 'low':
             num_activities = random.randint(2, 8)
-        else:  # medium
+        else:
             num_activities = random.randint(5, 15)
 
-        # Generate session start time
         base_time = datetime.datetime.now(datetime.UTC) - datetime.timedelta(
             hours=random.uniform(0, 6)
         )
@@ -237,9 +233,8 @@ class EnhancedDataGenerator:
         activities = []
         current_time = base_time
 
-        for i in range(num_activities):
-            # Realistic time progression within session
-            time_increment = random.uniform(30, 300)  # 30 seconds to 5 minutes
+        for _ in range(num_activities):
+            time_increment = random.uniform(30, 300)
             current_time += datetime.timedelta(seconds=time_increment)
 
             activity = EnhancedUserActivityFactory(
@@ -250,7 +245,7 @@ class EnhancedDataGenerator:
 
         return activities
 
-    def generate_correlated_transaction_activity(self, user_id: str = None) -> Dict[str, List]:
+    def generate_correlated_transaction_activity(self, user_id: str = None) -> dict[str, list]:
         """Generate correlated transactions and activities for a user"""
         if user_id is None:
             user_id = self.user_pool.get_user_id()
@@ -269,16 +264,13 @@ class EnhancedDataGenerator:
         activities = []
 
         for _ in range(num_transactions):
-            # Generate transaction
             transaction = EnhancedTransactionFactory(user_id=user_id)
             transactions.append(transaction)
 
-            # Generate related activities (browsing before purchase)
-            if random.random() < 0.7:  # 70% chance of activity before transaction
+            if random.random() < 0.7:
                 pre_activities = self.generate_user_session(user_id, 15)
                 activities.extend(pre_activities)
 
-        # Add some standalone activities
         standalone_activities = self.generate_user_session(user_id, 20)
         activities.extend(standalone_activities)
 
@@ -288,22 +280,20 @@ class EnhancedDataGenerator:
             'activities': activities
         }
 
-    def generate_realistic_batch(self, batch_size: int = 1000) -> Dict[str, List]:
+    def generate_realistic_batch(self, batch_size: int = 1000) -> dict[str, list]:
         """Generate a realistic batch with high correlation between core users"""
         transactions = []
         activities = []
 
-        # 80% of data comes from core users, 20% from new users
         core_user_data_ratio = 0.8
         core_data_size = int(batch_size * core_user_data_ratio)
 
-        # Generate data for core users (more concentrated)
         core_users_sample = random.sample(self.user_pool.core_users,
                                           min(15, len(self.user_pool.core_users)))
 
-        for i in range(core_data_size):
+        for _ in range(core_data_size):
             user_id = random.choice(core_users_sample)
-            if random.random() < 0.6:  # 60% transactions, 40% activities
+            if random.random() < 0.6:
                 transaction = EnhancedTransactionFactory(user_id=user_id)
                 transactions.append(transaction)
             else:
@@ -312,8 +302,8 @@ class EnhancedDataGenerator:
 
         # Generate remaining data (mixed users)
         remaining_size = batch_size - core_data_size
-        for i in range(remaining_size):
-            if random.random() < 0.4:  # 40% transactions, 60% activities
+        for _ in range(remaining_size):
+            if random.random() < 0.4:
                 transaction = EnhancedTransactionFactory()
                 transactions.append(transaction)
             else:
@@ -325,7 +315,7 @@ class EnhancedDataGenerator:
             'activities': activities
         }
 
-    def get_core_users(self) -> List[str]:
+    def get_core_users(self) -> list[str]:
         """Get list of core user IDs"""
         return self.user_pool.core_users.copy()
 
@@ -343,11 +333,8 @@ class EnhancedDataGenerator:
         print(f"User pool info saved to {filepath}")
         print(f"Core users: {len(self.user_pool.core_users)}")
 
-
-# Backward compatibility - create global instance
 DATA_GENERATOR = EnhancedDataGenerator()
 
-# Export the enhanced factories for direct use
 __all__ = [
     'EnhancedTransactionFactory',
     'EnhancedUserActivityFactory',

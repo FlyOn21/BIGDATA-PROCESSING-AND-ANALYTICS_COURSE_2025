@@ -67,7 +67,6 @@ ignore = ["F401",
     "B904", # raise without from inside except
     "B006", # ignore defoult mitable array use
     "W191", # indentation contains tabs (conflicts with format.indent-style="tab")
-    "STR100"  # use of str.format() (conflicts with format.quote-style="single")
 ]
 fixable = ["ALL"]
 unfixable = []

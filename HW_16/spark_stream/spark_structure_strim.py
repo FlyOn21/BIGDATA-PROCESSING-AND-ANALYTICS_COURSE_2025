@@ -1,23 +1,31 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import shutil
 import tempfile
-import contextlib
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.functions import coalesce, from_unixtime, expr, lit
-from pyspark.sql.functions import col, from_json, to_timestamp, when, window, count, desc
-from pyspark.sql.streaming import StreamingQuery
-from pyspark.sql.types import (
-    StructType,
-    StructField,
-    StringType,
-    DoubleType,
-    BooleanType
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.functions import (
+    coalesce,
+    col,
+    count,
+    desc,
+    expr,
+    from_json,
+    from_unixtime,
+    lit,
+    to_timestamp,
+    when,
+    window,
 )
+
+if TYPE_CHECKING:
+    from pyspark.sql.streaming import StreamingQuery
+from pyspark.sql.types import BooleanType, DoubleType, StringType, StructField, StructType
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -42,9 +50,9 @@ class SparkJsonSchemaStreamProcessor:
             master: str | None = "local[*]",
             session_tz: str = "Europe/Kyiv",
             starting_offsets: str = "earliest",
-            driver_memory: str = "4g",
-            executor_memory: str = "4g",
-            max_result_size: str = "2g",
+            driver_memory: str = "10g",
+            executor_memory: str = "8g",
+            max_result_size: str = "1g",
     ) -> None:
 
         # Clean environment variables that might cause conflicts
@@ -435,7 +443,7 @@ class SparkJsonSchemaStreamProcessor:
             .filter(
                 (col("amount") > 1000) &
                 (col("merchant") == "Amazon") &
-                (col("is_fraud") == True)
+                col("is_fraud")
             )
             .withColumn("fraud_reason", lit("High Amount Amazon Fraud"))
             .withColumn("detection_timestamp", expr("current_timestamp()"))
