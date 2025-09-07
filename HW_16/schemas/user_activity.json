@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/user_activity.json",
+  "title": "UserActivity",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUIDv4 string"
+    },
+    "user_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "User UUID"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": ["click", "view", "add_to_cart", "purchase"]
+    },
+    "device": {
+      "type": "string",
+      "enum": ["mobile", "desktop", "tablet"]
+    },
+    "browser": {
+      "type": "string",
+      "enum": ["Chrome", "Safari", "Firefox", "Edge"]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 timestamp"
+    }
+  },
+  "required": [
+    "event_id",
+    "user_id",
+    "event_type",
+    "device",
+    "browser",
+    "timestamp"
+  ]
+}

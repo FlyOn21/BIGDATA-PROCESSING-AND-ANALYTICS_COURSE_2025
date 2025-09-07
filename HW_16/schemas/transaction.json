@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/transaction.json",
+  "title": "Transaction",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "transaction_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUIDv4 string"
+    },
+    "user_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID of the user who made the transaction"
+    },
+    "amount": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Transaction amount in currency units"
+    },
+    "merchant": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Merchant name"
+    },
+    "currency": {
+      "type": "string",
+      "enum": ["USD"],
+      "description": "ISO 4217 currency code"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 timestamp"
+    },
+    "is_fraud": {
+      "type": "boolean",
+      "description": "Fraudulent transaction flag"
+    }
+  },
+  "required": [
+    "transaction_id",
+    "user_id",
+    "amount",
+    "merchant",
+    "currency",
+    "timestamp",
+    "is_fraud"
+  ]
+}
