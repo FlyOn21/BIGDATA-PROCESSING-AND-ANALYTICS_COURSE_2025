@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import logging
 import os
+import shutil
 import tempfile
 import contextlib
+from pathlib import Path
 
 from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.functions import coalesce, from_unixtime, expr
+from pyspark.sql.functions import coalesce, from_unixtime, expr, lit
 from pyspark.sql.functions import col, from_json, to_timestamp, when, window, count, desc
 from pyspark.sql.streaming import StreamingQuery
 from pyspark.sql.types import (
@@ -18,10 +20,10 @@ from pyspark.sql.types import (
 )
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-
-
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 
 class SparkJsonSchemaStreamProcessor:
@@ -36,66 +38,109 @@ class SparkJsonSchemaStreamProcessor:
     def __init__(
             self,
             bootstrap_servers: str = "127.0.0.1:9092",
-            app_name: str = "KafkaJSONStructuredStreaming",
+            app_name: str = "OptimizedKafkaStreaming",
             master: str | None = "local[*]",
             session_tz: str = "Europe/Kyiv",
             starting_offsets: str = "earliest",
+            driver_memory: str = "4g",
+            executor_memory: str = "4g",
+            max_result_size: str = "2g",
     ) -> None:
 
+        # Clean environment variables that might cause conflicts
         problematic_vars = ['PYSPARK_SUBMIT_ARGS', 'SPARK_SUBMIT_OPTS']
         for var in problematic_vars:
             if var in os.environ:
                 logger.info(f"Clearing {var}: {os.environ[var]}")
                 del os.environ[var]
 
+        # Set JAVA_HOME if not set
         if 'JAVA_HOME' not in os.environ:
             java_home = '/usr/lib/jvm/java-21-openjdk-amd64'
             if os.path.exists(java_home):
                 os.environ['JAVA_HOME'] = java_home
                 logger.info(f"Set JAVA_HOME to: {java_home}")
 
-        temp_dir = tempfile.mkdtemp(prefix="spark_")
-        os.environ['SPARK_LOCAL_DIRS'] = temp_dir
+        # Create temporary directory for Spark
+        self.temp_dir = tempfile.mkdtemp(prefix="spark_optimized_")
+        os.environ['SPARK_LOCAL_DIRS'] = self.temp_dir
 
         builder = (
             SparkSession.builder
             .appName(app_name)
             .config("spark.sql.session.timeZone", session_tz)
+
+            .config("spark.driver.memory", driver_memory)
+            .config("spark.executor.memory", executor_memory)
+            .config("spark.driver.maxResultSize", max_result_size)
+            .config("spark.driver.memoryFraction", "0.8")
+            .config("spark.executor.memoryFraction", "0.8")
+            .config("spark.storage.memoryFraction", "0.6")
+
+            .config("spark.executor.extraJavaOptions",
+                    "-XX:+UseG1GC -XX:+UnlockDiagnosticVMOptions -XX:+G1PrintRegionRememberedSetInfo "
+                    "-XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:MaxGCPauseMillis=200 "
+                    "-XX:G1HeapRegionSize=16m -XX:+UseStringDeduplication")
+            .config("spark.driver.extraJavaOptions",
+                    "-XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:G1HeapRegionSize=16m")
+
             .config("spark.sql.adaptive.enabled", "true")
             .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
-            .config("spark.driver.memory", "2g")
-            .config("spark.executor.memory", "2g")
-            .config("spark.driver.maxResultSize", "1g")
+            # Fixed deprecated configuration
+            .config("spark.sql.adaptive.coalescePartitions.minPartitionSize", "64MB")
+            .config("spark.sql.adaptive.coalescePartitions.initialPartitionNum", "4")
+            .config("spark.sql.adaptive.advisoryPartitionSizeInBytes", "128MB")
+
+            .config("spark.sql.streaming.metricsEnabled", "true")
+            .config("spark.sql.streaming.stateStore.compression.codec", "lz4")
+            .config("spark.sql.streaming.stateStore.maintenanceInterval", "300s")
+            .config("spark.streaming.stopGracefullyOnShutdown", "true")
+
             .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+            .config("spark.kryo.unsafe", "true")
+            .config("spark.kryoserializer.buffer.max", "1024m")
+
             .config("spark.sql.execution.arrow.pyspark.enabled", "false")
-            .config("spark.jars.ivy", f"{temp_dir}/ivy")
-            .config("spark.sql.streaming.checkpointLocation", f"{temp_dir}/checkpoints")
+            .config("spark.sql.execution.arrow.maxRecordsPerBatch", "1000")
+
+            .config("spark.jars.ivy", f"{self.temp_dir}/ivy")
+            .config("spark.sql.streaming.checkpointLocation", f"{self.temp_dir}/checkpoints")
+            .config("spark.local.dir", self.temp_dir)
+
+            .config("spark.sql.files.maxPartitionBytes", "134217728")
+            .config("spark.sql.files.openCostInBytes", "4194304")
         )
 
         if master:
             builder = builder.master(master)
 
-        logger.info("Initializing Spark session...")
+        logger.info("Initializing optimized Spark session...")
 
         try:
             self.spark: SparkSession = builder.getOrCreate()
-            self.spark.sparkContext.setLogLevel("ERROR")
-            logger.info(f"Spark session created successfully. Version: {self.spark.version}")
+            self.spark.sparkContext.setLogLevel("WARN")
 
+            # Set additional runtime configurations
+            self.spark.conf.set("spark.sql.execution.arrow.pyspark.enabled", "false")
+
+            logger.info(f"Spark session created successfully. Version: {self.spark.version}")
+            logger.info(f"Available cores: {self.spark.sparkContext.defaultParallelism}")
+
+            # Test Kafka connectivity
             try:
                 self.spark.readStream.format("kafka")
                 logger.info("Kafka connector is available!")
             except Exception as kafka_error:
-                logger.info(f"WARNING: Kafka connector not available: {kafka_error}")
-                logger.info(
-                    "Make sure to run with: spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.2")
+                logger.warning(f"Kafka connector not available: {kafka_error}")
+                logger.info("Make sure to run with appropriate Kafka packages")
 
         except Exception as e:
-            logger.info(f"Failed to create Spark session: {e}")
+            logger.error(f"Failed to create Spark session: {e}")
             raise e
 
         self.bootstrap_servers = bootstrap_servers
         self.starting_offsets = starting_offsets
+        self.output_paths = {}
 
     @staticmethod
     def transactions_schema() -> StructType:
@@ -144,25 +189,103 @@ class SparkJsonSchemaStreamProcessor:
                  )
         )
 
+    def _check_and_prepare_output_path(self, base_path: str, clear_existing: bool = False) -> str:
+        """
+        Prepare output path and handle existing data
+
+        Args:
+            base_path: Base output path
+            clear_existing: Whether to clear existing data
+
+        Returns:
+            Prepared output path
+        """
+        path = Path(base_path)
+
+        if path.exists():
+            if clear_existing:
+                logger.info(f"Clearing existing data at {path}")
+                shutil.rmtree(path)
+                path.mkdir(parents=True, exist_ok=True)
+            else:
+                if any(path.iterdir()):
+                    logger.warning(f"Data exists at {path}, using different path")
+                    counter = 1
+                    while True:
+                        new_path = Path(f"{base_path}_{counter}")
+                        if not new_path.exists() or not any(new_path.iterdir()):
+                            path = new_path
+                            break
+                        counter += 1
+
+        path.mkdir(parents=True, exist_ok=True)
+        self.output_paths[base_path] = str(path)
+        return str(path)
+
+    def save_optimized_parquet(
+            self,
+            df: DataFrame,
+            base_output_path: str,
+            mode: str = "append",
+            partition_cols: list = None,
+            max_files: int = 4
+    ) -> StreamingQuery:
+        """
+        Save DataFrame to Parquet with optimized file management
+
+        Args:
+            df: DataFrame to save
+            base_output_path: Base output path
+            mode: Write mode ('append', 'overwrite')
+            partition_cols: Columns to partition by
+            max_files: Maximum number of files to create
+        """
+        output_path = self._check_and_prepare_output_path(base_output_path)
+        checkpoint_path = f"{output_path}_checkpoint"
+
+        logger.info(f"Saving optimized Parquet to {output_path}")
+
+        # Optimize DataFrame before writing
+        optimized_df = df.coalesce(max_files)
+
+        writer = (
+            optimized_df.writeStream
+            .outputMode(mode)
+            .format("parquet")
+            .option("path", output_path)
+            .option("checkpointLocation", checkpoint_path)
+            .option("maxFilesPerTrigger", str(max_files))
+            .trigger(processingTime="60 seconds")  # Longer interval for batching
+        )
+
+        if partition_cols:
+            writer = writer.partitionBy(*partition_cols)
+
+        return writer.start()
+
     def read_kafka_streams(
             self,
             transactions_topic: str = "transactions",
             user_activity_topic: str = "user_activity",
     ) -> dict[str, DataFrame]:
-        """
-        Task 1: Reading from Kafka
-        Reading from two Kafka topics using Spark Structured Streaming
-        """
-        logger.info(f"Connecting to Kafka cluster at {self.bootstrap_servers}")
-        logger.info(f"Reading from topics: {transactions_topic}, {user_activity_topic}")
+        """Read from Kafka topics with optimized settings"""
+        logger.info(f"Connecting to Kafka at {self.bootstrap_servers}")
+
+        kafka_options = {
+            "kafka.bootstrap.servers": self.bootstrap_servers,
+            "startingOffsets": self.starting_offsets,
+            "failOnDataLoss": "false",
+            "maxOffsetsPerTrigger": "10000",
+            "kafka.consumer.cache.enabled": "false",
+            "kafka.fetch.min.bytes": "1024",
+            "kafka.fetch.max.wait.ms": "500"
+        }
 
         transactions = (
             self.spark.readStream
             .format("kafka")
-            .option("kafka.bootstrap.servers", self.bootstrap_servers)
+            .options(**kafka_options)
             .option("subscribe", transactions_topic)
-            .option("startingOffsets", self.starting_offsets)
-            .option("failOnDataLoss", "false")
             .load()
             .selectExpr("CAST(value AS STRING) AS json_str", "timestamp as kafka_timestamp")
         )
@@ -170,10 +293,8 @@ class SparkJsonSchemaStreamProcessor:
         user_activity = (
             self.spark.readStream
             .format("kafka")
-            .option("kafka.bootstrap.servers", self.bootstrap_servers)
+            .options(**kafka_options)
             .option("subscribe", user_activity_topic)
-            .option("startingOffsets", self.starting_offsets)
-            .option("failOnDataLoss", "false")
             .load()
             .selectExpr("CAST(value AS STRING) AS json_str", "timestamp as kafka_timestamp")
         )
@@ -185,37 +306,36 @@ class SparkJsonSchemaStreamProcessor:
             transactions_json_df: DataFrame,
             watermark: str = "10 minutes",
     ) -> DataFrame:
-        """
-        Task 2: Transaction Processing
-        Transform data from Kafka to DataFrame with required columns
-        and set proper timestamp type
-        """
-        logger.info("Parsing transactions JSON and applying watermark...")
+        """Parse transactions with memory-optimized processing"""
+        logger.info("Parsing transactions JSON with optimizations...")
+
         parsed = (
             transactions_json_df
             .select(from_json(col("json_str"), self.transactions_schema()).alias("data"), "kafka_timestamp")
             .select("data.*", "kafka_timestamp")
+            .withColumn("timestamp", self._parse_timestamp(col("timestamp")))
+            .select(
+                "transaction_id",
+                "user_id",
+                "amount",
+                "merchant",
+                "timestamp",
+                "is_fraud"
+            )
+            .withWatermark("timestamp", watermark)
         )
-
-        parsed = parsed.withColumn("timestamp", self._parse_timestamp(col("timestamp")))
-
-        parsed = parsed.select(
-            "transaction_id",
-            "user_id",
-            "amount",
-            "merchant",
-            "timestamp",
-            "is_fraud"
-        )
-
-        return parsed.withWatermark("timestamp", watermark)
+        return parsed.repartition(4, col("user_id"))
 
     def parse_user_activity_json_with_watermark(
             self,
             user_activity_json_df: DataFrame,
             watermark: str = "10 minutes",
+            enable_deduplication: bool = True,
     ) -> DataFrame:
-        """Parse user activity JSON with watermark"""
+        """
+        Parse user activity JSON with watermark and optional deduplication
+        Task 2: Transaction Processing and Task 6: Event Deduplication
+        """
         logger.info("Parsing user activity JSON and applying watermark...")
 
         parsed = (
@@ -226,7 +346,14 @@ class SparkJsonSchemaStreamProcessor:
 
         parsed = parsed.withColumn("timestamp", self._parse_timestamp(col("timestamp")))
 
-        return parsed.withWatermark("timestamp", watermark)
+        # Task 6: Apply deduplication before watermark
+        if enable_deduplication:
+            logger.info("Applying event deduplication on event_id...")
+            parsed = parsed.dropDuplicates(["event_id"])
+
+        parsed = parsed.withWatermark("timestamp", watermark)
+
+        return parsed.repartition(4, col("user_id"))
 
     @staticmethod
     def analyze_user_activity_with_windows(
@@ -258,6 +385,7 @@ class SparkJsonSchemaStreamProcessor:
                 col("event_count"),
             )
             .orderBy(desc("window_start"), desc("event_count"))
+            .coalesce(2)
         )
 
     @staticmethod
@@ -286,8 +414,9 @@ class SparkJsonSchemaStreamProcessor:
                 col("unique_users"),
             )
             .orderBy(desc("window_start"), desc("total_events"))
+            .coalesce(2)
         )
-    
+
     @staticmethod
     def detect_fraud_transactions(
             transactions_parsed: DataFrame
@@ -301,35 +430,16 @@ class SparkJsonSchemaStreamProcessor:
         """
         logger.info("Applying fraud detection business logic...")
 
-        return transactions_parsed.filter(
-            (col("amount") > 1000)  # Transactions over $1000
-            & (col("merchant") == "Amazon")  # Amazon transactions
-            & (col("is_fraud") == True)  # Already marked as fraud
-        ).withColumn(
-            "fraud_reason",
-            when(col("amount") > 1000, "High Amount")
-            .when(col("merchant") == "Amazon", "Amazon Transaction")
-            .when(col("is_fraud") == True, "Flagged as Fraud")
-            .otherwise("Multiple Reasons"),
-        )
-
-    @staticmethod
-    def save_fraud_results_locally(
-            fraud_transactions: DataFrame,
-            output_path: str = "./fraud_results"
-    ) -> StreamingQuery:
-        """
-        Save fraud detection results to local storage
-        """
-        logger.info(f"Saving fraud results to {output_path}")
-
         return (
-            fraud_transactions.writeStream.outputMode("append")
-            .format("parquet")
-            .option("path", output_path)
-            .option("checkpointLocation", f"{output_path}_checkpoint")
-            .trigger(processingTime="30 seconds")
-            .start()
+            transactions_parsed
+            .filter(
+                (col("amount") > 1000) &
+                (col("merchant") == "Amazon") &
+                (col("is_fraud") == True)
+            )
+            .withColumn("fraud_reason", lit("High Amount Amazon Fraud"))
+            .withColumn("detection_timestamp", expr("current_timestamp()"))
+            .coalesce(2)
         )
 
     @staticmethod
@@ -344,22 +454,29 @@ class SparkJsonSchemaStreamProcessor:
         Time range: transaction timestamp ± 5 minutes from user activity timestamp
         """
         logger.info("Performing stream-stream join with time-range conditions...")
-        transactions_with_alias = transactions_parsed.select(
-            col("transaction_id"),
-            col("user_id").alias("txn_user_id"),
-            col("amount"),
-            col("merchant"),
-            col("timestamp").alias("txn_timestamp"),
-            col("is_fraud")
+        transactions_opt = (
+            transactions_parsed
+            .select(
+                col("transaction_id"),
+                col("user_id").alias("txn_user_id"),
+                col("amount"),
+                col("merchant"),
+                col("timestamp").alias("txn_timestamp"),
+                col("is_fraud")
+            )
+            .repartition(4, col("txn_user_id"))
         )
-
-        user_activity_with_alias = user_activity_parsed.select(
-            col("event_id"),
-            col("user_id").alias("activity_user_id"),
-            col("event_type"),
-            col("device"),
-            col("browser"),
-            col("timestamp").alias("activity_timestamp")
+        user_activity_opt = (
+            user_activity_parsed
+            .select(
+                col("event_id"),
+                col("user_id").alias("activity_user_id"),
+                col("event_type"),
+                col("device"),
+                col("browser"),
+                col("timestamp").alias("activity_timestamp")
+            )
+            .repartition(4, col("activity_user_id"))
         )
 
         join_condition = (
@@ -368,50 +485,31 @@ class SparkJsonSchemaStreamProcessor:
                 (col("txn_timestamp") <= col("activity_timestamp") + expr("INTERVAL 5 MINUTES"))
         )
 
-        return transactions_with_alias.join(
-            user_activity_with_alias, join_condition, "inner"
-        ).select(
-            col("transaction_id"),
-            col("txn_user_id").alias("user_id"),
-            col("amount"),
-            col("merchant"),
-            col("txn_timestamp").alias("transaction_timestamp"),
-            col("is_fraud"),
-            col("event_id"),
-            col("event_type"),
-            col("device"),
-            col("browser"),
-            col("activity_timestamp"),
-            (
-                col("txn_timestamp").cast("long")
-                - col("activity_timestamp").cast("long")
-            ).alias("time_diff_seconds"),
-        )
-
-    @staticmethod
-    def save_joined_results_locally(
-            joined_df: DataFrame,
-            output_path: str = "./joined_streams_results"
-    ) -> StreamingQuery:
-        """
-        Task 5: Save joined stream results to local storage
-        """
-        logger.info(f"Saving joined stream results to {output_path}")
-
         return (
-            joined_df.writeStream.outputMode("append")
-            .format("parquet")
-            .option("path", output_path)
-            .option("checkpointLocation", f"{output_path}_checkpoint")
-            .trigger(processingTime="30 seconds")
-            .start()
+            transactions_opt
+            .join(user_activity_opt, join_condition, "inner")
+            .select(
+                col("transaction_id"),
+                col("txn_user_id").alias("user_id"),
+                col("amount"),
+                col("merchant"),
+                col("txn_timestamp").alias("transaction_timestamp"),
+                col("is_fraud"),
+                col("event_id"),
+                col("event_type"),
+                col("device"),
+                col("browser"),
+                col("activity_timestamp"),
+                (col("txn_timestamp").cast("long") - col("activity_timestamp").cast("long")).alias("time_diff_seconds"),
+            )
+            .coalesce(2)
         )
 
-    def main(self):
+    def main(self) -> list[StreamingQuery]:
         """
-        Demonstration of all four tasks
+        Demonstration of all tasks with fixed streaming query handling
         """
-        logger.info("Starting Spark Structured Streaming Demo (Tasks 1-4)...")
+        logger.info("Starting Spark Structured Streaming Demo (Tasks 1-5)...")
 
         # Task 1: Reading from Kafka
         streams = self.read_kafka_streams()
@@ -420,7 +518,10 @@ class SparkJsonSchemaStreamProcessor:
 
         # Task 2: Transaction Processing
         transactions_parsed = self.parse_transactions_json_with_watermark(transactions_raw)
-        user_activity_parsed = self.parse_user_activity_json_with_watermark(user_activity_raw)
+        user_activity_parsed = self.parse_user_activity_json_with_watermark(
+            user_activity_raw,
+            enable_deduplication=True
+        )
 
         # Task 3: User Activity Analysis with Sliding Windows
         logger.info("\n=== Task 3: User Activity Analysis ===")
@@ -438,7 +539,6 @@ class SparkJsonSchemaStreamProcessor:
 
         # Task 4: Fraud Detection
         logger.info("\n=== Task 4: Fraud Detection ===")
-
         fraud_transactions = self.detect_fraud_transactions(transactions_parsed)
 
         # Task 5: Stream-Stream Join
@@ -467,7 +567,8 @@ class SparkJsonSchemaStreamProcessor:
         logger.info("\nJoined Streams Schema:")
         joined_streams.printSchema()
 
-        # Output results to console for verification
+        streaming_queries = []
+
         logger.info("Starting console output for transactions...")
         transactions_query = (
             transactions_parsed
@@ -479,7 +580,9 @@ class SparkJsonSchemaStreamProcessor:
             .trigger(processingTime="10 seconds")
             .start()
         )
+        streaming_queries.append(transactions_query)
 
+        # Console output for user activities
         logger.info("Starting console output for user activities...")
         activities_query = (
             user_activity_parsed
@@ -491,6 +594,7 @@ class SparkJsonSchemaStreamProcessor:
             .trigger(processingTime="10 seconds")
             .start()
         )
+        streaming_queries.append(activities_query)
 
         # Task 3: Windowed analysis
         logger.info("\n=== User Activity with Sliding Windows ===")
@@ -504,6 +608,7 @@ class SparkJsonSchemaStreamProcessor:
             .trigger(processingTime="15 seconds")
             .start()
         )
+        streaming_queries.append(windowed_query)
 
         logger.info("\n=== Event Type Summary ===")
         summary_query = (
@@ -516,32 +621,40 @@ class SparkJsonSchemaStreamProcessor:
             .trigger(processingTime="15 seconds")
             .start()
         )
+        streaming_queries.append(summary_query)
 
-        # Task 4: Save fraud results locally
-        fraud_save_query = self.save_fraud_results_locally(
+        # Task 4: Save fraud results
+        logger.info("Setting up fraud detection streaming query...")
+        fraud_save_query = self.save_optimized_parquet(
             fraud_transactions,
-            output_path="./fraud_detection_results"
+            "./fraud_results",
+            max_files=2
         )
+        streaming_queries.append(fraud_save_query)
 
-        # Task 5: Save joined results locally
-        joined_save_query = self.save_joined_results_locally(
+        # Task 5: Save joined results
+        logger.info("Setting up joined streams streaming query...")
+        joined_save_query = self.save_optimized_parquet(
             joined_streams,
-            output_path="./joined_streams_results"
+            "./joined_results",
+            max_files=2
         )
+        streaming_queries.append(joined_save_query)
 
-        return [
-            transactions_query,
-            activities_query,
-            windowed_query,
-            summary_query,
-            fraud_save_query,
-            joined_save_query
-        ]
+        return streaming_queries
 
     def stop(self):
-        """Stop Spark session"""
-        self.spark.stop()
+        """Stop Spark session and cleanup"""
+        if hasattr(self, 'spark'):
+            self.spark.stop()
 
+        # Cleanup temporary directory
+        if hasattr(self, 'temp_dir') and os.path.exists(self.temp_dir):
+            try:
+                shutil.rmtree(self.temp_dir)
+                logger.info(f"Cleaned up temporary directory: {self.temp_dir}")
+            except Exception as e:
+                logger.warning(f"Failed to cleanup temp directory: {e}")
 
 
 if __name__ == "__main__":
@@ -554,23 +667,28 @@ if __name__ == "__main__":
 
         logger.info("Streaming started successfully!")
         logger.info("Press Ctrl+C to stop...")
-
         for query in queries:
-            query.awaitTermination()
+            if query is not None:
+                query.awaitTermination()
 
     except KeyboardInterrupt:
         logger.info("\nStopping streams...")
         for query in queries:
-            with contextlib.suppress(Exception):
-                query.stop()
+            if query is not None:
+                with contextlib.suppress(Exception):
+                    query.stop()
     except Exception as e:
         error_msg = str(e)
-        logger.info(f"Error: {error_msg}")
+        logger.error(f"Error: {error_msg}")
+        raise
     finally:
         for query in queries:
-            with contextlib.suppress(Exception):
-                query.stop()
+            if query is not None:
+                with contextlib.suppress(Exception):
+                    query.stop()
+
         if processor:
             with contextlib.suppress(Exception):
                 processor.stop()
-        logger.info("Spark session stopped.")
+
+        logger.info("Spark session stopped and resources cleaned up.")

@@ -4,8 +4,10 @@
 		kafka-produce-transactions kafka-consume-transactions \
 		kafka-produce-user_activity kafka-consume-user_activity \
 		kafka-logs kafka-status kafka-shell \
-		tools-check schema-wait schema-register schema-list schema-get-latest \
-		schema-compat-backward schema-compat-full schema-delete-subject
+		tools-check \
+		schema-wait schema-register schema-list schema-get-latest \
+		schema-compat-backward schema-compat-full schema-delete-subject \
+		execute-listener execute-producer
 
 SR_URL            ?= http://127.0.0.1:8081
 TX_SUBJECT        ?= transaction-value
@@ -114,12 +116,20 @@ schema-delete-subject: tools-check schema-wait ## Delete subjects (USE WITH CARE
 
 
 ######### Starter tasks ##########
-execute: ## Run the application
+#execute-listener: ## Run the application
+#	spark-submit \
+#    --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.2 \
+#    --driver-memory 4g \
+#    --executor-memory 4g \
+#    --conf spark.sql.session.timeZone=Europe/Kyiv \
+#    --conf spark.driver.maxResultSize=2g \
+#    --conf spark.sql.streaming.forceDeleteTempCheckpointLocation=true \
+#	${PWD}/spark_stream/spark_structure_strim.py
+
+execute-listener: ## Run the application
 	spark-submit \
     --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.2 \
-    --driver-memory 4g \
-    --executor-memory 4g \
-    --conf spark.sql.session.timeZone=Europe/Kyiv \
-    --conf spark.driver.maxResultSize=2g \
-    --conf spark.sql.streaming.forceDeleteTempCheckpointLocation=true \
-    ${PWD}/spark_stream/spark_structure_striming.py
+	${PWD}/spark_stream/spark_structure_strim.py
+
+execute-producer: ## Run the data producer
+	python3 ${PWD}/faker_generator/generate_messages.py
