@@ -1,0 +1,12 @@
+nyt_dbt_dag:
+  target: dev
+  outputs:
+    dev:
+      dbname: dbt_hw_20
+      host: dbt_hw_20_host
+      pass: "12345678"
+      port: 5432
+      schema: public
+      threads: 5
+      type: postgres
+      user: "dbt_user"
