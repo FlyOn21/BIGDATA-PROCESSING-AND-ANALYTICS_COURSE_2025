@@ -1,0 +1,123 @@
+
+# Name your project! Project names should contain only lowercase characters
+# and underscores. A good package name should reflect your organization's
+# name or the intended use of these models
+name: 'nyt_dbt_dag'
+version: '1.0.0'
+config-version: 2
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'nyt_dbt_dag'
+
+# These configurations specify where dbt should look for different types of files.
+# The `model-paths` config, for example, states that models in this project can be
+# found in the "models/" directory. You probably won't need to change these!
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:         # directories to be removed by `dbt clean`
+  - "target"
+  - "dbt_packages"
+
+
+# Configuring models
+# Full documentation: https://docs.getdbt.com/docs/configuring-models
+
+# In this example config, we tell dbt to build all models in the example/
+# directory as views. These settings can be overridden in the individual model
+# files using the `{{ config(...) }}` macro.
+models:
+  nyt_dbt_dag:
+    +post-hook:
+      - "ANALYZE {{ this }}"
+    staging:
+      +materialized: view
+    dimensions:
+      +materialized: table
+      +schema: dimensions
+    facts:
+      +materialized: table
+      +schema: facts
+
+vars:
+  yellow_stage_table: "yellow_taxi_stage"
+  green_stage_table: "green_taxi_stage"
+  zone_lookup_stage_table: "taxi_lookup_zone_stage"
+
+  yellow_stage_schema:
+    - {name: vendor_id,              type: bigint}
+    - {name: pickup_datetime,        type: timestamp}
+    - {name: dropoff_datetime,       type: timestamp}
+    - {name: passenger_count,        type: bigint}
+    - {name: trip_distance,          type: double precision}
+    - {name: rate_code_id,           type: bigint}
+    - {name: store_and_fwd_flag,     type: text}
+    - {name: pu_location_id,         type: bigint}
+    - {name: do_location_id,         type: bigint}
+    - {name: payment_type,           type: bigint}
+    - {name: fare_amount,            type: double precision}
+    - {name: extra,                  type: double precision}
+    - {name: mta_tax,                type: double precision}
+    - {name: tip_amount,             type: double precision}
+    - {name: tolls_amount,           type: double precision}
+    - {name: ehail_fee,              type: double precision}
+    - {name: improvement_surcharge,  type: double precision}
+    - {name: total_amount,           type: double precision}
+    - {name: trip_type,              type: bigint}
+    - {name: congestion_surcharge,   type: double precision}
+    - {name: airport_fee,            type: double precision}
+    - {name: taxi_type,              type: text}
+    - {name: trip_duration_minutes,  type: double precision}
+    - {name: pickup_hour,            type: integer}
+    - {name: pickup_day_of_week,     type: integer}
+    - {name: pickup_date,            type: date}
+    - {name: pickup_borough,         type: text}
+    - {name: pickup_zone,            type: text}
+    - {name: pickup_service_zone,    type: text}
+    - {name: dropoff_borough,        type: text}
+    - {name: dropoff_zone,           type: text}
+    - {name: dropoff_service_zone,   type: text}
+
+  green_stage_schema:
+    - {name: vendor_id,              type: bigint}
+    - {name: pickup_datetime,        type: timestamp}
+    - {name: dropoff_datetime,       type: timestamp}
+    - {name: passenger_count,        type: bigint}
+    - {name: trip_distance,          type: double precision}
+    - {name: rate_code_id,           type: bigint}
+    - {name: store_and_fwd_flag,     type: text}
+    - {name: pu_location_id,         type: bigint}
+    - {name: do_location_id,         type: bigint}
+    - {name: payment_type,           type: bigint}
+    - {name: fare_amount,            type: double precision}
+    - {name: extra,                  type: double precision}
+    - {name: mta_tax,                type: double precision}
+    - {name: tip_amount,             type: double precision}
+    - {name: tolls_amount,           type: double precision}
+    - {name: ehail_fee,              type: double precision}
+    - {name: improvement_surcharge,  type: double precision}
+    - {name: total_amount,           type: double precision}
+    - {name: trip_type,              type: bigint}
+    - {name: congestion_surcharge,   type: double precision}
+    - {name: airport_fee,            type: double precision}
+    - {name: taxi_type,              type: text}
+    - {name: trip_duration_minutes,  type: double precision}
+    - {name: pickup_hour,            type: integer}
+    - {name: pickup_day_of_week,     type: integer}
+    - {name: pickup_date,            type: date}
+    - {name: pickup_borough,         type: text}
+    - {name: pickup_zone,            type: text}
+    - {name: pickup_service_zone,    type: text}
+    - {name: dropoff_borough,        type: text}
+    - {name: dropoff_zone,           type: text}
+    - {name: dropoff_service_zone,   type: text}
+
+  zone_lookup_stage_schema:
+    - {name: LocationID,   type: bigint}
+    - {name: Borough,      type: text}
+    - {name: Zone,         type: text}
+    - {name: service_zone, type: text}

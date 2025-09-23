@@ -1,0 +1,169 @@
+version: 2
+
+models:
+  - name: fact_trip_summary_daily
+    description: "Aggregated daily trip summary by pickup date, taxi type, and boroughs."
+    columns:
+      - name: pickup_date
+        description: "Date of trip pickup."
+        tests:
+          - not_null
+
+      - name: taxi_type
+        description: "Type of taxi (e.g., yellow, green, fhv)."
+        tests:
+          - not_null
+
+      - name: pickup_borough
+        description: "Borough where the trip started."
+        tests:
+          - not_null
+
+      - name: dropoff_borough
+        description: "Borough where the trip ended."
+
+      - name: trip_count
+        description: "Total number of trips for the day."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: total_passengers
+        description: "Total number of passengers across all trips."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: avg_trip_distance
+        description: "Average trip distance in miles."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: avg_trip_duration
+        description: "Average trip duration in minutes."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: total_fare_amount
+        description: "Total fare amount for all trips."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: total_tip_amount
+        description: "Total tip amount for all trips."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: total_amount_sum
+        description: "Sum of total amounts for all trips."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: avg_total_amount
+        description: "Average total amount per trip."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: created_at
+        description: "Timestamp when the record was created."
+        tests:
+          - not_null
+
+  - name: fact_trip_summary_hourly
+    description: "Aggregated hourly trip summary by pickup date, hour, taxi type, and boroughs."
+    columns:
+      - name: pickup_date
+        description: "Date of trip pickup."
+        tests:
+          - not_null
+
+      - name: pickup_hour
+        description: "Hour of trip pickup (0-23)."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 23
+
+      - name: taxi_type
+        description: "Type of taxi (e.g., yellow, green, fhv)."
+        tests:
+          - not_null
+
+      - name: pickup_borough
+        description: "Borough where the trip started."
+        tests:
+          - not_null
+
+      - name: dropoff_borough
+        description: "Borough where the trip ended."
+
+      - name: trip_count
+        description: "Number of trips in the hour."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false
+
+      - name: total_passengers
+        description: "Total number of passengers across all trips in the hour."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: avg_trip_distance
+        description: "Average trip distance in miles for the hour."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: avg_trip_duration
+        description: "Average trip duration in minutes for the hour."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: total_fare_amount
+        description: "Total fare amount for all trips in the hour."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: total_tip_amount
+        description: "Total tip amount for all trips in the hour."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: total_amount_sum
+        description: "Sum of total amounts for all trips in the hour."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: avg_total_amount
+        description: "Average total amount per trip for the hour."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: created_at
+        description: "Timestamp when the record was created."
+        tests:
+          - not_null

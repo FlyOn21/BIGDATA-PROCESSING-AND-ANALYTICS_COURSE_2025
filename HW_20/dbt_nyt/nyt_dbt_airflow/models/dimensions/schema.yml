@@ -1,0 +1,186 @@
+version: 2
+
+models:
+  - name: dim_locations
+    description: "Location and zone reference table for taxi pickup and dropoff points."
+    columns:
+      - name: location_id
+        description: "Unique identifier for location."
+        tests:
+          - unique
+          - not_null
+
+      - name: borough
+        description: "NYC borough name (Manhattan, Brooklyn, Queens, Bronx, Staten Island)."
+        tests:
+          - not_null
+
+      - name: zone
+        description: "Taxi zone name within the borough."
+        tests:
+          - not_null
+
+      - name: service_zone
+        description: "Service zone classification for the location."
+
+      - name: created_at
+        description: "Timestamp when the record was created."
+        tests:
+          - not_null
+
+  - name: dim_trips
+    description: "Main trips table with enriched location information."
+    columns:
+      - name: trip_id
+        description: "Unique trip identifier generated from pickup/dropoff times and location."
+        tests:
+          - unique
+          - not_null
+
+      - name: pickup_datetime
+        description: "Trip pickup timestamp."
+        tests:
+          - not_null
+
+      - name: dropoff_datetime
+        description: "Trip dropoff timestamp."
+        tests:
+          - not_null
+
+      - name: pickup_date
+        description: "Trip pickup date."
+        tests:
+          - not_null
+
+      - name: pickup_hour
+        description: "Hour of trip pickup (0-23)."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 23
+
+      - name: pu_location_id
+        description: "Pickup location ID."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_locations')
+              field: location_id
+
+      - name: do_location_id
+        description: "Dropoff location ID."
+        tests:
+          - relationships:
+              to: ref('dim_locations')
+              field: location_id
+
+      - name: passenger_count
+        description: "Number of passengers in the trip."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 6
+
+      - name: trip_distance
+        description: "Trip distance in miles."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false
+
+      - name: trip_duration_minutes
+        description: "Trip duration in minutes."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false
+
+      - name: fare_amount
+        description: "Base fare amount charged for the trip."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: extra
+        description: "Extra charges (rush hour, overnight surcharge)."
+#        tests:
+#          - dbt_utils.accepted_range:
+#              min_value: 0
+
+      - name: mta_tax
+        description: "MTA tax amount."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: tip_amount
+        description: "Tip amount paid by passenger."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: tolls_amount
+        description: "Total amount of tolls paid during trip."
+#        tests:
+#          - dbt_utils.accepted_range:
+#              min_value: 0
+
+      - name: improvement_surcharge
+        description: "Improvement surcharge amount."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: total_amount
+        description: "Total amount charged to passenger."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: payment_type
+        description: "Payment method used (Credit, Cash, etc.)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4, 5, 6]
+
+      - name: taxi_type
+        description: "Type of taxi service."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['yellow', 'green']
+
+      - name: pickup_borough
+        description: "Borough where the trip started."
+        tests:
+          - not_null
+
+      - name: pickup_zone
+        description: "Zone where the trip started."
+        tests:
+          - not_null
+
+      - name: pickup_service_zone
+        description: "Service zone where the trip started."
+
+      - name: dropoff_borough
+        description: "Borough where the trip ended."
+
+      - name: dropoff_zone
+        description: "Zone where the trip ended."
+
+      - name: dropoff_service_zone
+        description: "Service zone where the trip ended."
+
+      - name: created_at
+        description: "Timestamp when the record was created."
+        tests:
+          - not_null
