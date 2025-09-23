@@ -4,6 +4,9 @@ from airflow.models.dag import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 
+from HW_20.dags.dag_utils.check_connection import check_connect_data
+from HW_20.dags.dag_utils.spark_postgres_validate_result import validate_results
+
 default_args = {
     'owner': 'data_engineer',
     'depends_on_past': False,
@@ -13,109 +16,6 @@ default_args = {
     'retries': 1,
     'retry_delay': timedelta(minutes=1),
 }
-
-
-def check_connect_data():
-    """Check connection to data sources and PostgreSQL."""
-    import logging
-    import os
-
-    logger = logging.getLogger('hw_20_dag.check_connect_data')
-
-    dags_path = "/opt/airflow/dags"
-    logger.info(f"Contents of {dags_path}:")
-    try:
-        for item in os.listdir(dags_path):
-            logger.info(f"  {item}")
-    except Exception as e:
-        logger.error(f"Cannot list directory {dags_path}: {e}")
-
-    data_path = "/opt/airflow/dags/source_data/home_work_data"
-    required_paths = [
-        f"{data_path}/green_taxi",
-        f"{data_path}/yellow_taxi",
-        f"{data_path}/taxi_zone_lookup.csv"
-    ]
-
-    for path in required_paths:
-        if not os.path.exists(path):
-            parent_dir = os.path.dirname(path)
-            if os.path.exists(parent_dir):
-                logger.info(f"Contents of {parent_dir}:")
-                try:
-                    for item in os.listdir(parent_dir):
-                        logger.info(f"  {item}")
-                except Exception as e:
-                    logger.error(f"Cannot list directory {parent_dir}: {e}")
-            raise FileNotFoundError(f"Data not found: {path}")
-        logger.info(f"Data found: {path}")
-
-    try:
-        import psycopg2
-        conn = psycopg2.connect(
-            host='postgres_db_dbt_hw_20',
-            port=5432,
-            database='dbt_hw_20',
-            user='dbt_user',
-            password='12345678'
-        )
-        conn.close()
-        logger.info("PostgreSQL connection successful")
-    except Exception as e:
-        logger.error(f"PostgreSQL connection failed: {e}")
-        raise
-
-    logger.info("All connections and data checks passed!")
-    return True
-
-
-def validate_results():
-    """Validate processed data in PostgreSQL."""
-    import logging
-
-    import psycopg2
-
-    logger = logging.getLogger('hw_20_dag.validate_results')
-
-    conn = None  # Инициализируем переменную
-    try:
-        conn = psycopg2.connect(
-            host='postgres_db_dbt_hw_20',
-            port=5432,
-            database='dbt_hw_20',
-            user='dbt_user',
-            password='12345678'
-        )
-        cursor = conn.cursor()
-
-        # Check tables exist and have data
-        tables = ['yellow_taxi_stage', 'green_taxi_stage', 'taxi_lookup_zone_stage']
-
-        for table in tables:
-            try:
-                cursor.execute(f"SELECT COUNT(*) FROM {table}")
-                count = cursor.fetchone()[0]
-                logger.info(f"{table}: {count:,} records")
-
-                if count == 0:
-                    raise ValueError(f"No data in {table}")
-            except psycopg2.ProgrammingError as e:
-                if "does not exist" not in str(e):
-                    raise e
-                logger.error(f"Table {table} does not exist")
-                raise ValueError(f"Table {table} does not exist")
-
-        logger.info("Data validation successful!")
-
-    except Exception as e:
-        logger.error(f"Validation failed: {e}")
-        raise
-    finally:
-        if conn:
-            conn.close()
-
-    return True
-
 
 with DAG(
         dag_id='hw_20_nyc_taxi_general_processing',
@@ -179,6 +79,5 @@ with DAG(
             dbt test --target dev --profiles-dir /home/airflow/.dbt --project-dir /dbt_nyt/nyt_dbt_airflow
             """
     )
-
 
     check_connect_data_task >> spark_processing >> validate_results_task >> dbt_deps >> dbt_run >> dbt_test
