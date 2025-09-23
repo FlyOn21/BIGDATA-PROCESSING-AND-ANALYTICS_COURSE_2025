@@ -21,9 +21,17 @@ def validate_results():
         # Check tables exist and have data
         tables = ['yellow_taxi_stage', 'green_taxi_stage', 'taxi_lookup_zone_stage']
 
+        table_queries = {
+            'yellow_taxi_stage': 'SELECT COUNT(*) FROM yellow_taxi_stage',
+            'green_taxi_stage': 'SELECT COUNT(*) FROM green_taxi_stage',
+            'taxi_lookup_zone_stage': 'SELECT COUNT(*) FROM taxi_lookup_zone_stage'
+        }
+
         for table in tables:
             try:
-                cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                if table not in table_queries:
+                    raise ValueError(f"Unknown table: {table}")
+                cursor.execute(table_queries[table])
                 count = cursor.fetchone()[0]
                 logger.info(f"{table}: {count:,} records")
 
