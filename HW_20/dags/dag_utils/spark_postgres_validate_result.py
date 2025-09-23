@@ -33,7 +33,7 @@ def validate_results():
                 if "does not exist" not in str(e):
                     raise e
                 logger.error(f"Table {table} does not exist")
-                raise ValueError(f"Table {table} does not exist")
+                raise ValueError(f"Table {table} does not exist") from e
 
         logger.info("Data validation successful!")
 

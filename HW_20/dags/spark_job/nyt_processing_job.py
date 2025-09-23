@@ -87,6 +87,12 @@ class NYCTaxiProcessor:
             StructField('service_zone', StringType(), True)
         ])
 
+    @staticmethod
+    def _cast_nullable(col_name: str, data_type: DataType):
+        return when(col(col_name).isNotNull(), col(col_name).cast(data_type)) \
+            .otherwise(lit(None).cast(data_type)) \
+            .alias(col_name)
+
     def normalize_parquet_file(self, file_path: str, taxi_type: TaxiTypeEnum, output_path: str) -> bool:
         """Normalize a single parquet file to consistent schema."""
         try:
@@ -95,40 +101,20 @@ class NYCTaxiProcessor:
 
             target_schema = self._get_taxi_schema(taxi_type)
 
+            type_castors = {
+                DoubleType: lambda f: self._cast_nullable(f, DoubleType()),
+                DecimalType: lambda f: self._cast_nullable(f, DoubleType()),
+                LongType: lambda f: self._cast_nullable(f, LongType()),
+                StringType: lambda f: self._cast_nullable(f, StringType()),
+                TimestampType: lambda f: self._cast_nullable(f, TimestampType())
+            }
             select_expressions = []
-
-            for field in target_schema.fields:
-                field_name = field.name
-                field_type = field.dataType
-
-                if field_name in df.columns:
-                    if isinstance(field_type, DoubleType | DecimalType):
-                        expr_value = when(col(field_name).isNotNull(), col(field_name).cast(DoubleType())) \
-                            .otherwise(lit(None).cast(DoubleType())).alias(field_name)
-                    elif isinstance(field_type, LongType):
-                        expr_value = when(col(field_name).isNotNull(), col(field_name).cast(LongType())) \
-                            .otherwise(lit(None).cast(LongType())).alias(field_name)
-                    elif isinstance(field_type, StringType):
-                        expr_value = when(col(field_name).isNotNull(), col(field_name).cast(StringType())) \
-                            .otherwise(lit(None).cast(StringType())).alias(field_name)
-                    elif isinstance(field_type, TimestampType):
-                        expr_value = when(col(field_name).isNotNull(), col(field_name).cast(TimestampType())) \
-                            .otherwise(lit(None).cast(TimestampType())).alias(field_name)
-                    else:
-                        expr_value = col(field_name)
-                elif isinstance(field_type, DoubleType):
-                    expr_value = lit(None).cast(DoubleType()).alias(field_name)
-                elif isinstance(field_type, LongType):
-                    expr_value = lit(None).cast(LongType()).alias(field_name)
-                elif isinstance(field_type, StringType):
-                    expr_value = lit(None).cast(StringType()).alias(field_name)
-                elif isinstance(field_type, TimestampType):
-                    expr_value = lit(None).cast(TimestampType()).alias(field_name)
+            for fld in target_schema.fields:
+                if fld.name in df.columns:
+                    castor = type_castors.get(type(fld.dataType))
+                    select_expressions.append(castor(fld.name) if castor else col(fld.name))
                 else:
-                    expr_value = lit(None).cast(field_type).alias(field_name)
-
-                select_expressions.append(expr_value)
-
+                    select_expressions.append(lit(None).cast(fld.dataType).alias(fld.name))
             final_df = df.select(*select_expressions)
 
             final_df.coalesce(1).write.mode("overwrite").parquet(output_path)
@@ -183,6 +169,11 @@ class NYCTaxiProcessor:
 
         return normalized_folder
 
+    def _maybe_cast(self, df, name, dtype):
+        if name in df.columns:
+            return df.withColumn(name, self._cast_nullable(name, dtype))
+        return df
+
     def read_taxi_data(self, taxi_type: TaxiTypeEnum, use_normalized: bool = True) -> DataFrame:
         """Read taxi data from local parquet files (recursively) with schema evolution support."""
         if use_normalized:
@@ -235,23 +226,12 @@ class NYCTaxiProcessor:
                     .parquet(*parquet_files)
                 )
 
-                if "passenger_count" in df.columns:
-                    df = df.withColumn("passenger_count",
-                                       when(col("passenger_count").isNotNull(),
-                                            col("passenger_count").cast(DoubleType()))
-                                       .otherwise(lit(None).cast(DoubleType())))
-
-                if "RatecodeID" in df.columns:
-                    df = df.withColumn("RatecodeID",
-                                       when(col("RatecodeID").isNotNull(),
-                                            col("RatecodeID").cast(LongType()))
-                                       .otherwise(lit(None).cast(LongType())))
-
-                if taxi_type == TaxiTypeEnum.YELLOW and "airport_fee" in df.columns:
-                    df = df.withColumn("airport_fee",
-                                       when(col("airport_fee").isNotNull(),
-                                            col("airport_fee").cast(DoubleType()))
-                                       .otherwise(lit(None).cast(DoubleType())))
+                for col_name, dt in [
+                    ("passenger_count", DoubleType()),
+                    ("RatecodeID", LongType()),
+                    ("airport_fee", DoubleType()) if taxi_type == TaxiTypeEnum.YELLOW else ("ehail_fee", DoubleType())
+                ]:
+                    df = self._maybe_cast(df, *(dt if isinstance(dt, DataType) else (col_name, dt)))
 
             record_count = df.count()
             self.logger.info(f"Successfully read {record_count:,} {taxi_type.value} taxi records")
