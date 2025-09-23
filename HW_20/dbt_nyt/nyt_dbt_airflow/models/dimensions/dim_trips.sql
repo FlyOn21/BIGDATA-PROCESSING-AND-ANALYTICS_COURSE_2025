@@ -63,4 +63,4 @@ deduplicated_trips AS (
 )
 
 SELECT *
-FROM deduplicated_trips;
+FROM deduplicated_trips

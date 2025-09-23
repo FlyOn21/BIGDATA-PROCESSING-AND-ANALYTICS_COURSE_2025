@@ -320,7 +320,7 @@ class NYCTaxiProcessor:
                 col('VendorID').alias('vendor_id'),
                 col(pickup_col).alias('pickup_datetime'),
                 col(dropoff_col).alias('dropoff_datetime'),
-                col('passenger_count').cast(LongType()),  # Cast to LongType for consistency
+                col('passenger_count').cast(LongType()),
                 col('trip_distance'),
                 col('RatecodeID').cast(LongType()).alias('rate_code_id'),
                 col('store_and_fwd_flag'),
@@ -348,7 +348,7 @@ class NYCTaxiProcessor:
                 col('VendorID').alias('vendor_id'),
                 col(pickup_col).alias('pickup_datetime'),
                 col(dropoff_col).alias('dropoff_datetime'),
-                col('passenger_count').cast(LongType()),  # Cast to LongType for consistency
+                col('passenger_count').cast(LongType()),
                 col('trip_distance'),
                 col('RatecodeID').cast(LongType()).alias('rate_code_id'),
                 col('store_and_fwd_flag'),
@@ -538,7 +538,6 @@ def create_spark_session() -> SparkSession:
 
 def main():
     """Main execution function."""
-    # Setup logging
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -547,13 +546,8 @@ def main():
 
     spark = None
     try:
-        # Create Spark session
         spark = create_spark_session()
-
-        # Initialize processor
         processor = NYCTaxiProcessor(spark)
-
-        # Run processing pipeline
         processor.process_all_data()
 
         logger.info("NYC Taxi data processing completed successfully!")

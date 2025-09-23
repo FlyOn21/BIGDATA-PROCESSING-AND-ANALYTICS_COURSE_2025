@@ -1,9 +1,8 @@
-from airflow.models.dag import DAG
 from datetime import datetime, timedelta
 
+from airflow.models.dag import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
-
 
 default_args = {
     'owner': 'data_engineer',
@@ -18,8 +17,8 @@ default_args = {
 
 def check_connect_data():
     """Check connection to data sources and PostgreSQL."""
-    import os
     import logging
+    import os
 
     logger = logging.getLogger('hw_20_dag.check_connect_data')
 
@@ -72,8 +71,9 @@ def check_connect_data():
 
 def validate_results():
     """Validate processed data in PostgreSQL."""
-    import psycopg2
     import logging
+
+    import psycopg2
 
     logger = logging.getLogger('hw_20_dag.validate_results')
 
